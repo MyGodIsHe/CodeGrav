@@ -5,11 +5,14 @@ import pygame
 import exceptions
 from camera import camera
 from render import Clickable
-from space import Space, Node, Edge
+from space import Node, SubSpace
+from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
 
-start_drag_pos = None
+
+DOUBLE_CLICK_THRESHOLD = 500
 _EVENTS = []
+_CLICK_TIME = 0
 
 
 def event_rule(condition):
@@ -26,10 +29,10 @@ class DragType(StrEnum):
 
 
 class EventsManager:
-    def __init__(self, space: Space):
+    def __init__(self, space_manager: SpaceManager):
         self.start_drag_pos = None
         self.drag_type: DragType | None = None
-        self.space: Space = space
+        self.space_manager: SpaceManager = space_manager
         self.selected_objects: list[Node] = []
         self.selected_rect = None
 
@@ -40,14 +43,20 @@ class EventsManager:
                     handler(self, event)
 
     def was_select(self, event) -> Node | None:
-        for obj in self.space.objects:
+        for obj in self.space_manager.space.objects:
             if isinstance(obj, Clickable) and obj.rect().collidepoint(event.pos):
                 return obj
 
     @event_rule(lambda e: e.type == pygame.QUIT)
-    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
-    def event_exit(self, event):
+    def event_game_exit(self, event):
         raise exceptions.Exit()
+
+    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
+    def event_escape(self, event):
+        if self.space_manager.rollback():
+            self.selected_objects = []
+        else:
+            raise exceptions.Exit()
 
     @event_rule(lambda e: (
             e.type == pygame.MOUSEBUTTONUP
@@ -80,7 +89,8 @@ class EventsManager:
     @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_n)
     def event_create_node(self, event):
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        self.space.add_node(Node(self.space.get_new_id(), mouse_x - camera.x, mouse_y - camera.y, "X"))
+        x, y = camera.window_to_world(mouse_x, mouse_y)
+        self.space_manager.space.add_node(Node(x, y, "X"))
 
     @event_rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
     def event_drag(self, event):
@@ -92,7 +102,7 @@ class EventsManager:
     def event_drop(self, event):
         if self.drag_type == DragType.rect and self.selected_rect:
             self.selected_objects = []
-            for obj in self.space.nodes.values():
+            for obj in self.space_manager.space.nodes.values():
                 if self.selected_rect.colliderect(obj) and self.selected_rect.contains(obj):
                     self.selected_objects.append(obj)
         self.start_drag_pos = None
@@ -104,8 +114,8 @@ class EventsManager:
         if self.drag_type == DragType.scene:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
-            camera.x += dx
-            camera.y += dy
+            camera.x -= dx
+            camera.y -= dy
         elif self.drag_type == DragType.object:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
@@ -127,14 +137,30 @@ class EventsManager:
         if len(self.selected_objects) == 1:
             target = self.was_select(event)
             if target and self.selected_objects[0] != target:
-                self.space.add_connect(self.selected_objects[0], target)
+                self.space_manager.space.add_connect(self.selected_objects[0], target)
 
     @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_g)
     def event_create_subspace(self, event):
         if not self.selected_objects:
             return
         x, y = get_common_center(self.selected_objects)
-        g_node = Node(self.space.get_new_id(), x, y, "G")
-        self.space.add_node(g_node)
-        self.space.merge_nodes([obj.id for obj in self.selected_objects], g_node)
-        self.selected_objects = [g_node]
+        x, y = camera.window_to_world(x, y)
+        ss = SubSpace(x, y)
+        self.space_manager.space.add_node(ss)
+        ss.space = self.space_manager.space.merge_nodes([obj.id for obj in self.selected_objects], ss)
+        self.selected_objects = [ss]
+
+    @event_rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and is_double_click())
+    def event_enter_to_subspace(self, event):
+        obj = self.was_select(event)
+        if obj and isinstance(obj, SubSpace):
+            self.space_manager.apply(obj)
+            self.selected_objects = []
+
+
+def is_double_click():
+    global _CLICK_TIME
+    current_time = pygame.time.get_ticks()
+    is_double = current_time - _CLICK_TIME < DOUBLE_CLICK_THRESHOLD
+    _CLICK_TIME = current_time
+    return is_double

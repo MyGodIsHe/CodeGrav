@@ -20,7 +20,6 @@ def get_common_center(nodes: list[Node]):
         total_x += center[0]
         total_y += center[1]
 
-    # Находим среднее значение для X и Y
     common_center_x = total_x // len(nodes)
     common_center_y = total_y // len(nodes)
 
