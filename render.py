@@ -94,14 +94,3 @@ def draw_dashed_rect(surface, color, rect, width=1, dash_length=5):
             start_pos = (p1[0] + int(dx * start), p1[1] + int(dy * start))
             end_pos = (p1[0] + int(dx * end), p1[1] + int(dy * end))
             pygame.draw.line(surface, color, start_pos, end_pos, width)
-
-
-def normalize_rect(rect):
-    """Возвращает нормализованный rect с положительной шириной и высотой."""
-    if rect.width < 0:
-        rect.x += rect.width
-        rect.width = abs(rect.width)
-    if rect.height < 0:
-        rect.y += rect.height
-        rect.height = abs(rect.height)
-    return rect

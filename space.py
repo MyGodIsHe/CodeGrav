@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from typing import Iterator
 
 import pygame
@@ -35,7 +36,8 @@ class Node(Clickable, Drawable):
 
 
 class Edge(Drawable):
-    def __init__(self, start: Node, end: Node):
+    def __init__(self, id: int, start: Node, end: Node):
+        self.id = id
         self.start = start
         self.end = end
 
@@ -55,6 +57,52 @@ class Space:
             yield e
         for n in self.nodes.values():
             yield n
+
+    def merge_nodes(self, node_ids: list[int], group: Node):
+        detached_space = Space()
+
+        # Update edges to point to the new node and collect edges of removed nodes
+        new_edges = []
+        for edge in self.edges:
+            if edge.start.id in node_ids and edge.end.id in node_ids:
+                # Add to detached space if both nodes are in the list
+                detached_space.edges.append(edge)
+            else:
+                # Update start or end if necessary to point to the new_node
+                if edge.start.id in node_ids:
+                    edge.start = group
+                if edge.end.id in node_ids:
+                    edge.end = group
+                new_edges.append(edge)
+
+        self.edges = new_edges
+
+        # Add detached nodes and their edges to the detached space
+        for node_id in node_ids:
+            if node_id in self.nodes:
+                detached_space.nodes[node_id] = self.nodes.pop(node_id)
+
+        return detached_space
+
+    def add_connect(self, start: Node, end: Node):
+        edge = Edge(self.get_new_id(), start, end)
+        self.edges.append(edge)
+        self.edges_links[start.id].append(edge)
+        if start.id != end.id:
+            self.edges_links[end.id].append(edge)
+
+    def add_node(self, node: Node):
+        self.nodes[node.id] = node
+
+    def del_node(self, node: Node):
+        del self.nodes[node.id]
+        if node.id in self.edges_links:
+            edges = self.edges_links.get(node.id)
+            if edges:
+                del self.edges_links[node.id]
+                for edge in edges:
+                    if edge in self.edges:
+                        self.edges.remove(edge)
 
     def get_new_id(self) -> int:
         self.last_id += 1
@@ -83,7 +131,7 @@ class Space:
             for n in data['nodes']
         }
         self.nodes = [
-            Edge(start=self.nodes[e['start']], end=self.nodes[e['start']])
+            Edge(e['id'], start=self.nodes[e['start']], end=self.nodes[e['start']])
             for e in data['edges']
         ]
         self.last_id = max(obj.id for obj in self.objects)

@@ -4,8 +4,9 @@ import pygame
 
 import exceptions
 from camera import camera
-from render import Clickable, normalize_rect
+from render import Clickable
 from space import Space, Node, Edge
+from utils import normalize_rect, get_common_center
 
 start_drag_pos = None
 _EVENTS = []
@@ -79,8 +80,7 @@ class EventsManager:
     @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_n)
     def event_create_node(self, event):
         mouse_x, mouse_y = pygame.mouse.get_pos()
-        node = Node(self.space.get_new_id(), mouse_x - camera.x, mouse_y - camera.y, "X")
-        self.space.nodes[node.id] = node
+        self.space.add_node(Node(self.space.get_new_id(), mouse_x - camera.x, mouse_y - camera.y, "X"))
 
     @event_rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
     def event_drag(self, event):
@@ -92,7 +92,7 @@ class EventsManager:
     def event_drop(self, event):
         if self.drag_type == DragType.rect and self.selected_rect:
             self.selected_objects = []
-            for obj in self.space.objects:
+            for obj in self.space.nodes.values():
                 if self.selected_rect.colliderect(obj) and self.selected_rect.contains(obj):
                     self.selected_objects.append(obj)
         self.start_drag_pos = None
@@ -127,4 +127,14 @@ class EventsManager:
         if len(self.selected_objects) == 1:
             target = self.was_select(event)
             if target and self.selected_objects[0] != target:
-                self.space.edges.append(Edge(self.selected_objects[0], target))
+                self.space.add_connect(self.selected_objects[0], target)
+
+    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_g)
+    def event_create_subspace(self, event):
+        if not self.selected_objects:
+            return
+        x, y = get_common_center(self.selected_objects)
+        g_node = Node(self.space.get_new_id(), x, y, "G")
+        self.space.add_node(g_node)
+        self.space.merge_nodes([obj.id for obj in self.selected_objects], g_node)
+        self.selected_objects = [g_node]
