@@ -4,7 +4,7 @@ import pygame
 
 import exceptions
 from camera import camera
-from render import Clickable
+from render import Clickable, normalize_rect
 from space import Space, Node, Edge
 
 start_drag_pos = None
@@ -68,7 +68,7 @@ class EventsManager:
     def event_multi_select(self, event):
         if self.drag_type:
             return
-        if self.selected_objects == [self.was_select(event)]:
+        if self.was_select(event) in self.selected_objects:
             self.start_drag_pos = event.pos
             self.drag_type = DragType.object
             self.selected_rect = None
@@ -90,6 +90,11 @@ class EventsManager:
 
     @event_rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button in [1, 3])
     def event_drop(self, event):
+        if self.drag_type == DragType.rect and self.selected_rect:
+            self.selected_objects = []
+            for obj in self.space.objects:
+                if self.selected_rect.colliderect(obj) and self.selected_rect.contains(obj):
+                    self.selected_objects.append(obj)
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
@@ -104,13 +109,14 @@ class EventsManager:
         elif self.drag_type == DragType.object:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
-            self.selected_objects[0].x += dx
-            self.selected_objects[0].y += dy
+            for obj in self.selected_objects:
+                obj.x += dx
+                obj.y += dy
         elif self.drag_type == DragType.rect:
-            self.selected_rect = pygame.Rect(
+            self.selected_rect = normalize_rect(pygame.Rect(
                 self.start_drag_pos,
                 (event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]),
-            )
+            ))
 
     @event_rule(lambda e: (
             e.type == pygame.MOUSEBUTTONDOWN
