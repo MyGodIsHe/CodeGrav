@@ -11,7 +11,7 @@ def normalize_rect(rect):
     return rect
 
 
-def get_common_center(nodes: Node):
+def get_common_center(nodes: list[Node]):
     assert nodes
     total_x, total_y = 0, 0
 

@@ -30,7 +30,7 @@ class EventsManager:
         self.start_drag_pos = None
         self.drag_type: DragType | None = None
         self.space: Space = space
-        self.selected_objects: list[Clickable] = []
+        self.selected_objects: list[Node] = []
         self.selected_rect = None
 
     def check(self):
@@ -39,7 +39,7 @@ class EventsManager:
                 if condition(event):
                     handler(self, event)
 
-    def was_select(self, event):
+    def was_select(self, event) -> Node | None:
         for obj in self.space.objects:
             if isinstance(obj, Clickable) and obj.rect().collidepoint(event.pos):
                 return obj
