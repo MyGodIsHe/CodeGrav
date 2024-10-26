@@ -56,7 +56,9 @@ class EventsManager:
     def event_select_node(self, event):
         if self.selected_rect and max(self.selected_rect.width, self.selected_rect.height) > 1:
             return
-        self.selected_objects = [self.was_select(event)]
+        obj = self.was_select(event)
+        if obj:
+            self.selected_objects = [obj]
 
     @event_rule(lambda e: (
             e.type == pygame.MOUSEBUTTONDOWN
