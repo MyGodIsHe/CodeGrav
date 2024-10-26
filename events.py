@@ -1,8 +1,8 @@
+import sys
 from enum import StrEnum
 
 import pygame
 
-import exceptions
 from camera import camera
 from render import Clickable
 from space import Node, SubSpace
@@ -49,14 +49,15 @@ class EventsManager:
 
     @event_rule(lambda e: e.type == pygame.QUIT)
     def event_game_exit(self, event):
-        raise exceptions.Exit()
+        sys.exit()
 
     @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
     def event_escape(self, event):
         if self.space_manager.rollback():
             self.selected_objects = []
         else:
-            raise exceptions.Exit()
+            pygame.quit()
+            sys.exit()
 
     @event_rule(lambda e: (
             e.type == pygame.MOUSEBUTTONUP
