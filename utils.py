@@ -16,7 +16,7 @@ def get_common_center(nodes: list[Node]):
     total_x, total_y = 0, 0
 
     for node in nodes:
-        center = node.rect().center
+        center = node.select_rect().center
         total_x += center[0]
         total_y += center[1]
 

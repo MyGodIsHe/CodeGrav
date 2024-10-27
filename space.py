@@ -5,37 +5,52 @@ import pygame
 from pygame import Surface, Rect
 
 from camera import camera
-from render import Clickable, Drawable, draw_arrow
-
+from render import Clickable, Drawable, draw_arrow, draw_button
 
 _LAST_ID = 0
 
 
 class Node(Clickable, Drawable):
-    def __init__(self, x: int, y: int, text: str, id: int | None = None):
+    def __init__(self, x: int, y: int, text: str = "X", id: int | None = None):
         self.id = id or get_new_id()
         self.x = x
         self.y = y
         self.text = text
 
     def draw(self, surface: Surface):
-        rect_color = (0, 128, 255)
-        text_color = (255, 255, 255)
-        rect = self.rect()
-        pygame.draw.rect(surface, rect_color, rect)
+        draw_button(surface, self.select_rect(), self.text)
 
-        font = pygame.font.Font(None, 24)
-        text_surface = font.render(self.text, True, text_color)
-
-        text_rect = text_surface.get_rect(center=rect.center)
-
-        surface.blit(text_surface, text_rect)
-
-    def rect(self) -> Rect:
+    def select_rect(self) -> Rect:
         width = 100
         height = 50
         x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
         return pygame.Rect(x, y, width, height)
+
+    def linked_rects(self):
+        return [self.select_rect()]
+
+
+class If(Node):
+    def __init__(self, x: int, y: int, id: int | None = None):
+        super().__init__(x, y, "IF", id)
+
+    def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), self.text)
+        rects = self.linked_rects()
+        draw_button(surface, rects[0], "o")
+        draw_button(surface, rects[1], "o")
+        draw_button(surface, rects[2], "f")
+        draw_button(surface, rects[3], "t")
+
+    def linked_rects(self) -> list[pygame.Rect]:
+        width = 50
+        height = 50
+        return [
+            pygame.Rect(*camera.world_to_window(self.x - width, self.y - height * 1.5), width, height),
+            pygame.Rect(*camera.world_to_window(self.x, self.y - height * 1.5), width, height),
+            pygame.Rect(*camera.world_to_window(self.x - width, self.y + height * 0.5), width, height),
+            pygame.Rect(*camera.world_to_window(self.x, self.y + height * 0.5), width, height),
+        ]
 
 
 class SubSpace(Node):
@@ -51,7 +66,7 @@ class Edge(Drawable):
         self.end = end
 
     def draw(self, surface: Surface):
-        draw_arrow(surface, self.start.rect(), self.end.rect(), 5, 10)
+        draw_arrow(surface, self.start.select_rect(), self.end.select_rect(), 5, 10)
 
 
 class Space:
@@ -65,6 +80,11 @@ class Space:
             yield e
         for n in self.nodes.values():
             yield n
+
+    def was_select(self, event) -> Node | None:
+        for obj in self.objects:
+            if isinstance(obj, Clickable) and obj.select_rect().collidepoint(event.pos):
+                return obj
 
     def merge_nodes(self, node_ids: list[int], group: Node) -> 'Space':
         detached_space = Space()

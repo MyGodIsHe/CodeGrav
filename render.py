@@ -6,7 +6,7 @@ from pygame import Surface, Rect
 
 class Clickable(ABC):
     @abstractmethod
-    def rect(self) -> Rect:
+    def select_rect(self) -> Rect:
         pass
 
 
@@ -18,6 +18,14 @@ class Drawable(ABC):
     @abstractmethod
     def draw(self, surface: Surface):
         pass
+
+
+def draw_button(surface, rect, text, rect_color=(0, 128, 255), text_color=(255, 255, 255)):
+    pygame.draw.rect(surface, rect_color, rect)
+    font = pygame.font.Font(None, 24)
+    text_surface = font.render(text, True, text_color)
+    text_rect = text_surface.get_rect(center=rect.center)
+    surface.blit(text_surface, text_rect)
 
 
 def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=(0, 0, 0)):

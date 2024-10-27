@@ -3,23 +3,17 @@ from enum import StrEnum
 
 import pygame
 
+import colors
+from app import Window
 from camera import camera
-from render import Clickable
-from space import Node, SubSpace
+from render import draw_dashed_rect, draw_button
+from space import Node, SubSpace, If
 from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
 
 
 DOUBLE_CLICK_THRESHOLD = 500
-_EVENTS = []
 _CLICK_TIME = 0
-
-
-def event_rule(condition):
-    def decorator(func):
-        _EVENTS.append((condition, func))
-        return func
-    return decorator
 
 
 class DragType(StrEnum):
@@ -28,30 +22,64 @@ class DragType(StrEnum):
     rect = 'rect'
 
 
-class EventsManager:
+class EventStorage:
+    def __init__(self):
+        self._events = []
+
+    def rule(self, condition):
+        def decorator(func):
+            self._events.append((condition, func))
+            return func
+        return decorator
+
+    def trigger_events(self, event_self):
+        for event in pygame.event.get():
+            for condition, func in self._events:
+                if condition(event):
+                    func(event_self, event)
+
+
+class EventManager:
     def __init__(self, space_manager: SpaceManager):
-        self.start_drag_pos = None
-        self.drag_type: DragType | None = None
+        self.space_manager = space_manager
+        self._main = MainEvents(self, space_manager)
+        self._current = self._main
+
+    def trigger_events(self):
+        self._current.trigger_events()
+
+    def switch_to_main(self):
+        self._current = self._main
+
+    def switch_to_context_menu(self, mouse_x: int, mouse_y: int):
+        self._current = ContextMenuEvents(self, self.space_manager, mouse_x, mouse_y)
+
+
+class MainEvents:
+    event = EventStorage()
+
+    def __init__(self, event_manager: EventManager, space_manager: SpaceManager):
+        self.event_manager = event_manager
         self.space_manager: SpaceManager = space_manager
+        self.window = Window.get()
+        self.start_drag_pos = None
+        self.drag_was_move = False
+        self.drag_type: DragType | None = None
         self.selected_objects: list[Node] = []
         self.selected_rect = None
 
-    def check(self):
-        for event in pygame.event.get():
-            for condition, handler in _EVENTS:
-                if condition(event):
-                    handler(self, event)
+    def trigger_events(self):
+        self.event.trigger_events(self)
+        for obj in self.selected_objects:
+            pygame.draw.rect(self.window.surface, colors.black, obj.select_rect(), 3)
+        if self.selected_rect:
+            draw_dashed_rect(self.window.surface, colors.black, self.selected_rect, 1, 10)
 
-    def was_select(self, event) -> Node | None:
-        for obj in self.space_manager.space.objects:
-            if isinstance(obj, Clickable) and obj.rect().collidepoint(event.pos):
-                return obj
-
-    @event_rule(lambda e: e.type == pygame.QUIT)
+    @event.rule(lambda e: e.type == pygame.QUIT)
     def event_game_exit(self, event):
         sys.exit()
 
-    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
     def event_escape(self, event):
         if self.space_manager.rollback():
             self.selected_objects = []
@@ -59,7 +87,7 @@ class EventsManager:
             pygame.quit()
             sys.exit()
 
-    @event_rule(lambda e: (
+    @event.rule(lambda e: (
             e.type == pygame.MOUSEBUTTONUP
             and e.button == 1
             and pygame.key.get_mods() == pygame.KMOD_NONE
@@ -67,11 +95,11 @@ class EventsManager:
     def event_select_node(self, event):
         if self.selected_rect and max(self.selected_rect.width, self.selected_rect.height) > 1:
             return
-        obj = self.was_select(event)
+        obj = self.space_manager.space.was_select(event)
         if obj:
             self.selected_objects = [obj]
 
-    @event_rule(lambda e: (
+    @event.rule(lambda e: (
             e.type == pygame.MOUSEBUTTONDOWN
             and e.button == 1
             and pygame.key.get_mods() == pygame.KMOD_NONE
@@ -79,7 +107,7 @@ class EventsManager:
     def event_multi_select(self, event):
         if self.drag_type:
             return
-        if self.was_select(event) in self.selected_objects:
+        if self.space_manager.space.was_select(event) in self.selected_objects:
             self.start_drag_pos = event.pos
             self.drag_type = DragType.object
             self.selected_rect = None
@@ -87,36 +115,48 @@ class EventsManager:
         self.start_drag_pos = event.pos
         self.drag_type = DragType.rect
 
-    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_n)
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_n)
     def event_create_node(self, event):
         mouse_x, mouse_y = pygame.mouse.get_pos()
         x, y = camera.window_to_world(mouse_x, mouse_y)
-        self.space_manager.space.add_node(Node(x, y, "X"))
+        self.space_manager.space.add_node(If(x, y))
 
-    @event_rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
     def event_drag(self, event):
         if not self.drag_type:
             self.start_drag_pos = event.pos
             self.drag_type = DragType.scene
 
-    @event_rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button in [1, 3])
-    def event_drop(self, event):
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 1)
+    def event_drop_left(self, event):
         if self.drag_type == DragType.rect and self.selected_rect:
             self.selected_objects = []
             for obj in self.space_manager.space.nodes.values():
-                if self.selected_rect.colliderect(obj) and self.selected_rect.contains(obj):
+                if self.selected_rect.colliderect(obj.select_rect()):
                     self.selected_objects.append(obj)
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
 
-    @event_rule(lambda e: e.type == pygame.MOUSEMOTION)
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 3)
+    def event_drop_right(self, event):
+        if not self.drag_was_move:
+            was_select = self.space_manager.space.was_select(event)
+            if not was_select:
+                self.event_manager.switch_to_context_menu(*event.pos)
+        self.start_drag_pos = None
+        self.drag_was_move = False
+        self.drag_type = None
+        self.selected_rect = None
+
+    @event.rule(lambda e: e.type == pygame.MOUSEMOTION)
     def event_move(self, event):
         if self.drag_type == DragType.scene:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
             camera.x -= dx
             camera.y -= dy
+            self.drag_was_move = True
         elif self.drag_type == DragType.object:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
@@ -129,18 +169,18 @@ class EventsManager:
                 (event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]),
             ))
 
-    @event_rule(lambda e: (
+    @event.rule(lambda e: (
             e.type == pygame.MOUSEBUTTONDOWN
             and e.button == 1
             and pygame.key.get_mods() & pygame.KMOD_SHIFT
     ))
     def event_create_connect(self, event):
         if len(self.selected_objects) == 1:
-            target = self.was_select(event)
+            target = self.space_manager.space.was_select(event)
             if target and self.selected_objects[0] != target:
                 self.space_manager.space.add_connect(self.selected_objects[0], target)
 
-    @event_rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_g)
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_g)
     def event_create_subspace(self, event):
         if not self.selected_objects:
             return
@@ -151,12 +191,55 @@ class EventsManager:
         ss.space = self.space_manager.space.merge_nodes([obj.id for obj in self.selected_objects], ss)
         self.selected_objects = [ss]
 
-    @event_rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and is_double_click())
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and is_double_click())
     def event_enter_to_subspace(self, event):
-        obj = self.was_select(event)
+        obj = self.space_manager.space.was_select(event)
         if obj and isinstance(obj, SubSpace):
             self.space_manager.apply(obj)
             self.selected_objects = []
+
+
+class ContextMenuEvents:
+    event = EventStorage()
+
+    def __init__(self, event_manager: EventManager, space_manager: SpaceManager, mouse_x: int, mouse_y: int):
+        self.window = Window.get()
+        self.event_manager: EventManager = event_manager
+        self.space_manager: SpaceManager = space_manager
+        self.mouse_x = mouse_x
+        self.mouse_y = mouse_y
+        width = 80
+        height = 30
+        self.menu_rects = {
+            (mouse_x, mouse_y, width, height): Node,
+            (mouse_x, mouse_y + height, width, height): If,
+        }
+
+    def trigger_events(self):
+        self.event.trigger_events(self)
+        for rect_params, cls in self.menu_rects.items():
+            draw_button(self.window.surface, pygame.Rect(*rect_params), cls.__name__)
+
+    @event.rule(lambda e: e.type == pygame.QUIT)
+    def event_game_exit(self, event):
+        sys.exit()
+
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
+    def event_escape(self, event):
+        pygame.quit()
+        sys.exit()
+
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 1)
+    def event_select_node(self, event):
+        selected_cls = None
+        for rect_params, cls in self.menu_rects.items():
+            if pygame.Rect(*rect_params).collidepoint(event.pos):
+                selected_cls = cls
+                break
+        if selected_cls:
+            x, y = camera.window_to_world(self.mouse_x, self.mouse_y)
+            self.space_manager.space.add_node(selected_cls(x, y))
+        self.event_manager.switch_to_main()
 
 
 def is_double_click():
