@@ -3,14 +3,12 @@ from abc import ABC, abstractmethod
 import pygame
 from pygame import Surface, Rect
 
+import colors
+
 
 class Clickable(ABC):
     @abstractmethod
     def select_rect(self) -> Rect:
-        pass
-
-    @abstractmethod
-    def select_linked_rects(self) -> list[Rect]:
         pass
 
 
@@ -24,12 +22,20 @@ class Drawable(ABC):
         pass
 
 
-def draw_button(surface, rect, text, rect_color=(0, 128, 255), text_color=(255, 255, 255)):
+def draw_button(surface, rect, text, rect_color=colors.blue, text_color=colors.white):
     pygame.draw.rect(surface, rect_color, rect)
     font = pygame.font.Font(None, 24)
     text_surface = font.render(text, True, text_color)
     text_rect = text_surface.get_rect(center=rect.center)
     surface.blit(text_surface, text_rect)
+
+
+def draw_circle(surface, x, y, text, radius=25, bg_color=colors.blue, text_color=colors.white):
+    pygame.draw.circle(surface, bg_color, (x, y), radius)
+    font = pygame.font.Font(None, 24)
+    text = font.render(text, True, text_color)
+    text_rect = text.get_rect(center=(x, y))
+    surface.blit(text, text_rect)
 
 
 def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=(0, 0, 0)):

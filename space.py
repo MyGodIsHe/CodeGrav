@@ -1,11 +1,12 @@
 import json
+from abc import ABC
 from typing import Iterator
 
 import pygame
 from pygame import Surface, Rect
 
 from camera import camera
-from render import Clickable, Drawable, draw_arrow, draw_button
+from render import Clickable, Drawable, draw_arrow, draw_button, draw_circle
 
 _LAST_ID = 0
 
@@ -28,30 +29,54 @@ class Pin(Drawable):
         return pygame.Rect(*camera.world_to_window(x, y), width, height)
 
 
-class Node(Clickable, Drawable):
-    def __init__(self, x: int, y: int, text: str = 'X', id: int | None = None):
+class InvisiblePin(Pin):
+    def __init__(self, node: 'Node', name: str, x: int, y: int):
+        super().__init__(node, name, x, y, '')
+
+    def draw(self, surface: Surface):
+        pass
+
+    def rect(self) -> Rect:
+        width = 50
+        height = 50
+        x, y = self.node.x + self.relative_x, self.node.y + self.relative_y
+        return pygame.Rect(*camera.world_to_window(x, y), width, height)
+
+
+class Node(Clickable, Drawable, ABC):
+    id: int
+    x: int
+    y: int
+    pins: list[Pin]
+
+
+class Const(Node):
+    def __init__(self, x: int, y: int, value: str = '1', id: int | None = None):
         self.id = id or get_new_id()
         self.x = x
         self.y = y
-        self.text = text
-        self.pins: list[Pin] = []
+        self.value = value
+        self.pins = [
+            InvisiblePin(self, 'value', -25, -25),
+        ]
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.text)
+        x, y = camera.world_to_window(self.x, self.y)
+        draw_circle(surface, x, y, self.value)
 
     def select_rect(self) -> Rect:
-        width = 100
+        width = 50
         height = 50
         x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
         return pygame.Rect(x, y, width, height)
 
-    def select_linked_rects(self):
-        return []
-
 
 class If(Node):
     def __init__(self, x: int, y: int, id: int | None = None):
-        super().__init__(x, y, 'IF', id)
+        self.id = id or get_new_id()
+        self.x = x
+        self.y = y
+        self.text = 'IF'
         self.pins = [
             Pin(self, 'input1', -50, -75, 'o'),
             Pin(self, 'input2', 0, -75, 'o'),
@@ -64,19 +89,32 @@ class If(Node):
         for pin in self.pins:
             pin.draw(surface)
 
-    def select_linked_rects(self):
-        return []
+    def select_rect(self) -> Rect:
+        width = 100
+        height = 50
+        x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
+        return pygame.Rect(x, y, width, height)
 
 
 class SubSpace(Node):
     def __init__(self, x: int, y: int):
-        super().__init__(x, y, "SubSpace")
+        self.id = id or get_new_id()
+        self.x = x
+        self.y = y
+        self.text = 'SubSpace'
+        self.pins = []
         self.space: Space | None = None
 
     def draw(self, surface: Surface):
         draw_button(surface, self.select_rect(), self.text)
         for pin in self.pins:
             pin.draw(surface)
+
+    def select_rect(self) -> Rect:
+        width = 100
+        height = 50
+        x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
+        return pygame.Rect(x, y, width, height)
 
 
 class Edge(Drawable):
