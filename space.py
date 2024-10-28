@@ -50,6 +50,44 @@ class Node(Clickable, Drawable, ABC):
     pins: list[Pin]
 
 
+class Input(Node):
+    def __init__(self, x: int, y: int, id: int | None = None):
+        self.id = id or get_new_id()
+        self.x = x
+        self.y = y
+        self.pins = [
+            InvisiblePin(self, 'input', -25, -25),
+        ]
+
+    def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), 'I')
+
+    def select_rect(self) -> Rect:
+        width = 50
+        height = 50
+        x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
+        return pygame.Rect(x, y, width, height)
+
+
+class Output(Node):
+    def __init__(self, x: int, y: int, id: int | None = None):
+        self.id = id or get_new_id()
+        self.x = x
+        self.y = y
+        self.pins = [
+            InvisiblePin(self, 'output', -25, -25),
+        ]
+
+    def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), 'O')
+
+    def select_rect(self) -> Rect:
+        width = 50
+        height = 50
+        x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
+        return pygame.Rect(x, y, width, height)
+
+
 class Const(Node):
     def __init__(self, x: int, y: int, value: str = '1', id: int | None = None):
         self.id = id or get_new_id()
@@ -86,6 +124,30 @@ class If(Node):
 
     def draw(self, surface: Surface):
         draw_button(surface, self.select_rect(), self.text)
+        for pin in self.pins:
+            pin.draw(surface)
+
+    def select_rect(self) -> Rect:
+        width = 100
+        height = 50
+        x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
+        return pygame.Rect(x, y, width, height)
+
+
+class Operator(Node):
+    def __init__(self, x: int, y: int, value: str = '+', id: int | None = None):
+        self.id = id or get_new_id()
+        self.x = x
+        self.y = y
+        self.value = value
+        self.pins = [
+            Pin(self, 'input1', -50, -75, 'o'),
+            Pin(self, 'input2', 0, -75, 'o'),
+            Pin(self, 'output', -25, 25, 'o'),
+        ]
+
+    def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), self.value)
         for pin in self.pins:
             pin.draw(surface)
 

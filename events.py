@@ -2,12 +2,13 @@ import sys
 from enum import StrEnum
 
 import pygame
+from docutils.io import Output
 
 import colors
 from app import Window
 from camera import camera
 from render import draw_dashed_rect, draw_button, draw_link
-from space import Node, SubSpace, If, Pin, Const
+from space import Node, SubSpace, If, Pin, Const, Input, Operator
 from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
 
@@ -205,8 +206,14 @@ class ContextMenuEvents:
         width = 80
         height = 30
         self.menu_rects = {
-            (mouse_x, mouse_y, width, height): Const,
-            (mouse_x, mouse_y + height, width, height): If,
+            (mouse_x, mouse_y + height * i, width, height): cls
+            for i, cls in enumerate([
+                Const,
+                Operator,
+                If,
+                Input,
+                Output,
+            ])
         }
 
     def trigger_events(self):
