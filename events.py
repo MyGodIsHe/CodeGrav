@@ -7,7 +7,7 @@ import colors
 from app import Window
 from camera import camera
 from render import draw_dashed_rect, draw_button, draw_link
-from space import Node, SubSpace, If
+from space import Node, SubSpace, If, Pin
 from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
 
@@ -69,7 +69,7 @@ class MainEvents:
         self.selected_objects: list[Node] = []
         self.selected_rect = None
         self.link_drag_start: pygame.Rect | None = None
-        self.link_drag_node: Node | None = None
+        self.link_drag_pin: Pin | None = None
 
     def trigger_events(self):
         self.event.trigger_events(self)
@@ -114,9 +114,9 @@ class MainEvents:
             return
         result = self.space_manager.space.was_select_linked_rect(event)
         if result:
-            obj, rect = result
+            pin, rect = result
             self.link_drag_start = rect
-            self.link_drag_node = obj
+            self.link_drag_pin = pin
             self.drag_type = DragType.link
         else:
             if self.space_manager.space.was_select_rect(event) in self.selected_objects:
@@ -143,13 +143,13 @@ class MainEvents:
         elif self.drag_type == DragType.link:
             result = self.space_manager.space.was_select_linked_rect(event)
             if result:
-                obj, rect = result
-                self.space_manager.space.add_connect(self.link_drag_node, obj)
+                pin, _ = result
+                self.space_manager.space.add_connect(self.link_drag_pin, pin)
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
         self.link_drag_start = None
-        self.link_drag_node = None
+        self.link_drag_pin = None
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 3)
     def event_drop_right(self, event):

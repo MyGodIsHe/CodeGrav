@@ -10,12 +10,31 @@ from render import Clickable, Drawable, draw_arrow, draw_button
 _LAST_ID = 0
 
 
+class Pin(Drawable):
+    def __init__(self, node: 'Node', name: str, x: int, y: int, text: str):
+        self.node: Node = node
+        self.name = name
+        self.relative_x = x
+        self.relative_y = y
+        self.text = text
+
+    def draw(self, surface: Surface):
+        draw_button(surface, self.rect(), self.text)
+
+    def rect(self) -> Rect:
+        width = 50
+        height = 50
+        x, y = self.node.x + self.relative_x, self.node.y + self.relative_y
+        return pygame.Rect(*camera.world_to_window(x, y), width, height)
+
+
 class Node(Clickable, Drawable):
-    def __init__(self, x: int, y: int, text: str = "X", id: int | None = None):
+    def __init__(self, x: int, y: int, text: str = 'X', id: int | None = None):
         self.id = id or get_new_id()
         self.x = x
         self.y = y
         self.text = text
+        self.pins: list[Pin] = []
 
     def draw(self, surface: Surface):
         draw_button(surface, self.select_rect(), self.text)
@@ -32,25 +51,21 @@ class Node(Clickable, Drawable):
 
 class If(Node):
     def __init__(self, x: int, y: int, id: int | None = None):
-        super().__init__(x, y, "IF", id)
+        super().__init__(x, y, 'IF', id)
+        self.pins = [
+            Pin(self, 'input1', -50, -75, 'o'),
+            Pin(self, 'input2', 0, -75, 'o'),
+            Pin(self, 'false', -50, 25, 'f'),
+            Pin(self, 'true', 0, 25, 't'),
+        ]
 
     def draw(self, surface: Surface):
         draw_button(surface, self.select_rect(), self.text)
-        rects = self.select_linked_rects()
-        draw_button(surface, rects[0], "o")
-        draw_button(surface, rects[1], "o")
-        draw_button(surface, rects[2], "f")
-        draw_button(surface, rects[3], "t")
+        for pin in self.pins:
+            pin.draw(surface)
 
-    def select_linked_rects(self) -> list[pygame.Rect]:
-        width = 50
-        height = 50
-        return [
-            pygame.Rect(*camera.world_to_window(self.x - width, self.y - height * 1.5), width, height),
-            pygame.Rect(*camera.world_to_window(self.x, self.y - height * 1.5), width, height),
-            pygame.Rect(*camera.world_to_window(self.x - width, self.y + height * 0.5), width, height),
-            pygame.Rect(*camera.world_to_window(self.x, self.y + height * 0.5), width, height),
-        ]
+    def select_linked_rects(self):
+        return []
 
 
 class SubSpace(Node):
@@ -58,15 +73,20 @@ class SubSpace(Node):
         super().__init__(x, y, "SubSpace")
         self.space: Space | None = None
 
+    def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), self.text)
+        for pin in self.pins:
+            pin.draw(surface)
+
 
 class Edge(Drawable):
-    def __init__(self, start: Node, end: Node, id: int | None = None):
+    def __init__(self, start: Pin, end: Pin, id: int | None = None):
         self.id = id or get_new_id()
-        self.start = start
-        self.end = end
+        self.start: Pin = start
+        self.end: Pin = end
 
     def draw(self, surface: Surface):
-        draw_arrow(surface, self.start.select_rect(), self.end.select_rect(), 5, 10)
+        draw_arrow(surface, self.start.rect(), self.end.rect(), 5, 10)
 
 
 class Space:
@@ -86,28 +106,35 @@ class Space:
             if isinstance(obj, Clickable) and obj.select_rect().collidepoint(event.pos):
                 return obj
 
-    def was_select_linked_rect(self, event) -> tuple[Clickable, pygame.Rect] | None:
+    def was_select_linked_rect(self, event) -> tuple[Pin, pygame.Rect] | None:
         for obj in self.objects:
-            if isinstance(obj, Clickable):
-                for rect in obj.select_linked_rects():
+            if isinstance(obj, Node):
+                for pin in obj.pins:
+                    rect = pin.rect()
                     if rect.collidepoint(event.pos):
-                        return obj, rect
+                        return pin, rect
 
-    def merge_nodes(self, node_ids: list[int], group: Node) -> 'Space':
+    def merge_nodes(self, node_ids: list[int], ss: SubSpace) -> 'Space':
         detached_space = Space()
 
         # Update edges to point to the new node and collect edges of removed nodes
         new_edges = []
         for edge in self.edges:
-            if edge.start.id in node_ids and edge.end.id in node_ids:
+            if edge.start.node.id in node_ids and edge.end.node.id in node_ids:
                 # Add to detached space if both nodes are in the list
                 detached_space.edges.append(edge)
             else:
                 # Update start or end if necessary to point to the new_node
-                if edge.start.id in node_ids:
-                    edge.start = group
-                if edge.end.id in node_ids:
-                    edge.end = group
+                if edge.start.node.id in node_ids:
+                    i = len(ss.pins) + 1
+                    pin = Pin(ss, 'start', -25, i * 50 - 25, f'o {i}')
+                    ss.pins.append(pin)
+                    edge.start = pin
+                if edge.end.node.id in node_ids:
+                    i = len(ss.pins) + 1
+                    pin = Pin(ss, 'end', -25, i * 50 - 25, f'o {i}')
+                    ss.pins.append(pin)
+                    edge.end = pin
                 new_edges.append(edge)
 
         self.edges = new_edges
@@ -119,7 +146,7 @@ class Space:
 
         return detached_space
 
-    def add_connect(self, start: Node, end: Node):
+    def add_connect(self, start: Pin, end: Pin):
         edge = Edge(start, end)
         self.edges.append(edge)
 
