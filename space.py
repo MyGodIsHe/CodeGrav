@@ -26,8 +26,8 @@ class Node(Clickable, Drawable):
         x, y = camera.world_to_window(self.x - width / 2, self.y - height / 2)
         return pygame.Rect(x, y, width, height)
 
-    def linked_rects(self):
-        return [self.select_rect()]
+    def select_linked_rects(self):
+        return []
 
 
 class If(Node):
@@ -36,13 +36,13 @@ class If(Node):
 
     def draw(self, surface: Surface):
         draw_button(surface, self.select_rect(), self.text)
-        rects = self.linked_rects()
+        rects = self.select_linked_rects()
         draw_button(surface, rects[0], "o")
         draw_button(surface, rects[1], "o")
         draw_button(surface, rects[2], "f")
         draw_button(surface, rects[3], "t")
 
-    def linked_rects(self) -> list[pygame.Rect]:
+    def select_linked_rects(self) -> list[pygame.Rect]:
         width = 50
         height = 50
         return [
@@ -81,10 +81,17 @@ class Space:
         for n in self.nodes.values():
             yield n
 
-    def was_select(self, event) -> Node | None:
+    def was_select_rect(self, event) -> Clickable | None:
         for obj in self.objects:
             if isinstance(obj, Clickable) and obj.select_rect().collidepoint(event.pos):
                 return obj
+
+    def was_select_linked_rect(self, event) -> tuple[Clickable, pygame.Rect] | None:
+        for obj in self.objects:
+            if isinstance(obj, Clickable):
+                for rect in obj.select_linked_rects():
+                    if rect.collidepoint(event.pos):
+                        return obj, rect
 
     def merge_nodes(self, node_ids: list[int], group: Node) -> 'Space':
         detached_space = Space()

@@ -9,6 +9,10 @@ class Clickable(ABC):
     def select_rect(self) -> Rect:
         pass
 
+    @abstractmethod
+    def select_linked_rects(self) -> list[Rect]:
+        pass
+
 
 class Drawable(ABC):
     id: int
@@ -40,6 +44,17 @@ def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=(0, 0, 0)):
 
     # Рисуем кружок на конце линии
     pygame.draw.circle(screen, color, (int(end_x), int(end_y)), circle_radius)
+
+
+def draw_link(screen, from_rect, to_point, thickness, color=(0, 0, 0)):
+    end_x, end_y = to_point
+    start = intersection_with_rectangle(from_rect, to_point)
+    if not start:
+        return
+    start_x, start_y = start
+
+    # Рисуем линию
+    pygame.draw.line(screen, color, (start_x, start_y), (end_x, end_y), thickness)
 
 
 def intersection_with_rectangle(rect, line_direction):

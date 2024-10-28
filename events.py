@@ -6,7 +6,7 @@ import pygame
 import colors
 from app import Window
 from camera import camera
-from render import draw_dashed_rect, draw_button
+from render import draw_dashed_rect, draw_button, draw_link
 from space import Node, SubSpace, If
 from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
@@ -20,6 +20,7 @@ class DragType(StrEnum):
     scene = 'scene'
     object = 'object'
     rect = 'rect'
+    link = 'link'
 
 
 class EventStorage:
@@ -67,6 +68,8 @@ class MainEvents:
         self.drag_type: DragType | None = None
         self.selected_objects: list[Node] = []
         self.selected_rect = None
+        self.link_drag_start: pygame.Rect | None = None
+        self.link_drag_node: Node | None = None
 
     def trigger_events(self):
         self.event.trigger_events(self)
@@ -74,6 +77,8 @@ class MainEvents:
             pygame.draw.rect(self.window.surface, colors.black, obj.select_rect(), 3)
         if self.selected_rect:
             draw_dashed_rect(self.window.surface, colors.black, self.selected_rect, 1, 10)
+        if self.link_drag_start:
+            draw_link(self.window.surface, self.link_drag_start, pygame.mouse.get_pos(), 5)
 
     @event.rule(lambda e: e.type == pygame.QUIT)
     def event_game_exit(self, event):
@@ -92,10 +97,10 @@ class MainEvents:
             and e.button == 1
             and pygame.key.get_mods() == pygame.KMOD_NONE
     ))
-    def event_select_node(self, event):
-        if self.selected_rect and max(self.selected_rect.width, self.selected_rect.height) > 1:
+    def event_select_node_or_link_point(self, event):
+        if self.selected_rect and max(self.selected_rect.width, self.selected_rect.height) > 5:
             return
-        obj = self.space_manager.space.was_select(event)
+        obj = self.space_manager.space.was_select_rect(event)
         if obj:
             self.selected_objects = [obj]
 
@@ -107,19 +112,20 @@ class MainEvents:
     def event_multi_select(self, event):
         if self.drag_type:
             return
-        if self.space_manager.space.was_select(event) in self.selected_objects:
+        result = self.space_manager.space.was_select_linked_rect(event)
+        if result:
+            obj, rect = result
+            self.link_drag_start = rect
+            self.link_drag_node = obj
+            self.drag_type = DragType.link
+        else:
+            if self.space_manager.space.was_select_rect(event) in self.selected_objects:
+                self.start_drag_pos = event.pos
+                self.drag_type = DragType.object
+                self.selected_rect = None
+                return
             self.start_drag_pos = event.pos
-            self.drag_type = DragType.object
-            self.selected_rect = None
-            return
-        self.start_drag_pos = event.pos
-        self.drag_type = DragType.rect
-
-    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_n)
-    def event_create_node(self, event):
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        x, y = camera.window_to_world(mouse_x, mouse_y)
-        self.space_manager.space.add_node(If(x, y))
+            self.drag_type = DragType.rect
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
     def event_drag(self, event):
@@ -134,14 +140,21 @@ class MainEvents:
             for obj in self.space_manager.space.nodes.values():
                 if self.selected_rect.colliderect(obj.select_rect()):
                     self.selected_objects.append(obj)
+        elif self.drag_type == DragType.link:
+            result = self.space_manager.space.was_select_linked_rect(event)
+            if result:
+                obj, rect = result
+                self.space_manager.space.add_connect(self.link_drag_node, obj)
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
+        self.link_drag_start = None
+        self.link_drag_node = None
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 3)
     def event_drop_right(self, event):
         if not self.drag_was_move:
-            was_select = self.space_manager.space.was_select(event)
+            was_select = self.space_manager.space.was_select_rect(event)
             if not was_select:
                 self.event_manager.switch_to_context_menu(*event.pos)
         self.start_drag_pos = None
@@ -176,7 +189,7 @@ class MainEvents:
     ))
     def event_create_connect(self, event):
         if len(self.selected_objects) == 1:
-            target = self.space_manager.space.was_select(event)
+            target = self.space_manager.space.was_select_rect(event)
             if target and self.selected_objects[0] != target:
                 self.space_manager.space.add_connect(self.selected_objects[0], target)
 
@@ -193,7 +206,7 @@ class MainEvents:
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and is_double_click())
     def event_enter_to_subspace(self, event):
-        obj = self.space_manager.space.was_select(event)
+        obj = self.space_manager.space.was_select_rect(event)
         if obj and isinstance(obj, SubSpace):
             self.space_manager.apply(obj)
             self.selected_objects = []
