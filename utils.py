@@ -1,4 +1,7 @@
-from space import Node
+from nodes import Node
+
+
+_LAST_ID = 0
 
 
 def normalize_rect(rect):
@@ -24,3 +27,9 @@ def get_common_center(nodes: list[Node]):
     common_center_y = total_y // len(nodes)
 
     return common_center_x, common_center_y
+
+
+def get_new_id() -> int:
+    global _LAST_ID
+    _LAST_ID += 1
+    return _LAST_ID

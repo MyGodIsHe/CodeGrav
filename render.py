@@ -1,25 +1,6 @@
-from abc import ABC, abstractmethod
-
 import pygame
-from pygame import Surface, Rect
 
 import colors
-
-
-class Clickable(ABC):
-    @abstractmethod
-    def select_rect(self) -> Rect:
-        pass
-
-
-class Drawable(ABC):
-    id: int
-    x: int
-    y: int
-
-    @abstractmethod
-    def draw(self, surface: Surface):
-        pass
 
 
 def draw_button(surface, rect, text, rect_color=colors.blue, text_color=colors.white):

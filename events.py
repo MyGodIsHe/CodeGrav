@@ -6,9 +6,10 @@ import pygame
 import colors
 from app import Window
 from camera import camera
+from nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
 from render import draw_dashed_rect, draw_button, draw_link
-from space import Node, SubSpace, If, Pin, Const, Input, Operator, Output
 from space_manager import SpaceManager
+from space_types import Node, BasePin
 from utils import normalize_rect, get_common_center
 
 
@@ -69,7 +70,7 @@ class MainEvents:
         self.selected_objects: list[Node] = []
         self.selected_rect = None
         self.link_drag_start: pygame.Rect | None = None
-        self.link_drag_pin: Pin | None = None
+        self.link_drag_pin: BasePin | None = None
 
     def trigger_events(self):
         self.event.trigger_events(self)
@@ -210,6 +211,7 @@ class ContextMenuEvents:
                 Const,
                 Operator,
                 If,
+                SelfSpace,
                 Input,
                 Output,
             ])
