@@ -2,13 +2,12 @@ import sys
 from enum import StrEnum
 
 import pygame
-from docutils.io import Output
 
 import colors
 from app import Window
 from camera import camera
 from render import draw_dashed_rect, draw_button, draw_link
-from space import Node, SubSpace, If, Pin, Const, Input, Operator
+from space import Node, SubSpace, If, Pin, Const, Input, Operator, Output
 from space_manager import SpaceManager
 from utils import normalize_rect, get_common_center
 

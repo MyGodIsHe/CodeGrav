@@ -5,13 +5,18 @@ from typing import Iterator
 import pygame
 from pygame import Surface, Rect
 
+import colors
 from camera import camera
 from render import Clickable, Drawable, draw_arrow, draw_button, draw_circle
 
 _LAST_ID = 0
 
 
-class Pin(Drawable):
+class BasePin(Drawable, Clickable, ABC):
+    pass
+
+
+class Pin(BasePin):
     def __init__(self, node: 'Node', name: str, x: int, y: int, text: str):
         self.node: Node = node
         self.name = name
@@ -20,13 +25,58 @@ class Pin(Drawable):
         self.text = text
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.rect(), self.text)
+        draw_button(surface, self.select_rect(), self.text)
 
-    def rect(self) -> Rect:
-        width = 50
-        height = 50
+    def select_rect(self) -> Rect:
+        half_size = 25
+        size = half_size * 2
+        x, y = self.node.x + self.relative_x - half_size, self.node.y + self.relative_y - half_size
+        return pygame.Rect(*camera.world_to_window(x, y), size, size)
+
+
+class HalfPin(BasePin):
+    def __init__(self, node: 'Node', name: str, x: int, y: int):
+        self.node: Node = node
+        self.name = name
+        self.relative_x = x
+        self.relative_y = y
+
+    def draw(self, surface: Surface):
         x, y = self.node.x + self.relative_x, self.node.y + self.relative_y
-        return pygame.Rect(*camera.world_to_window(x, y), width, height)
+        x, y = camera.world_to_window(x, y)
+        draw_circle(surface, x, y, radius=15)
+
+    def select_rect(self) -> Rect:
+        half_size = 15
+        size = half_size * 2
+        x, y = self.node.x + self.relative_x - half_size, self.node.y + self.relative_y - half_size
+        return pygame.Rect(*camera.world_to_window(x, y), size, size)
+
+
+class HalfTextPin(BasePin):
+    def __init__(self, node: 'Node', name: str, x: int, y: int, text: str, text_x: int, text_y: int):
+        self.node: Node = node
+        self.name = name
+        self.relative_x = x
+        self.relative_y = y
+        self.text = text
+        self.text_x = text_x
+        self.text_y = text_y
+
+    def draw(self, surface: Surface):
+        x, y = self.node.x + self.relative_x, self.node.y + self.relative_y
+        x, y = camera.world_to_window(x, y)
+        draw_circle(surface, x, y, radius=15)
+        font = pygame.font.Font(None, 24)
+        text_surface = font.render(self.text, True, colors.white)
+        text_rect = text_surface.get_rect(center=(x + self.text_x, y + self.text_y))
+        surface.blit(text_surface, text_rect)
+
+    def select_rect(self) -> Rect:
+        half_size = 15
+        size = half_size * 2
+        x, y = self.node.x + self.relative_x - half_size, self.node.y + self.relative_y - half_size
+        return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
 class InvisiblePin(Pin):
@@ -36,18 +86,18 @@ class InvisiblePin(Pin):
     def draw(self, surface: Surface):
         pass
 
-    def rect(self) -> Rect:
-        width = 50
-        height = 50
-        x, y = self.node.x + self.relative_x, self.node.y + self.relative_y
-        return pygame.Rect(*camera.world_to_window(x, y), width, height)
+    def select_rect(self) -> Rect:
+        half_size = 25
+        size = half_size * 2
+        x, y = self.node.x + self.relative_x - half_size, self.node.y + self.relative_y - half_size
+        return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
 class Node(Clickable, Drawable, ABC):
     id: int
     x: int
     y: int
-    pins: list[Pin]
+    pins: list[BasePin]
 
 
 class Input(Node):
@@ -56,7 +106,7 @@ class Input(Node):
         self.x = x
         self.y = y
         self.pins = [
-            InvisiblePin(self, 'input', -25, -25),
+            InvisiblePin(self, 'input', 0, 0),
         ]
 
     def draw(self, surface: Surface):
@@ -75,7 +125,7 @@ class Output(Node):
         self.x = x
         self.y = y
         self.pins = [
-            InvisiblePin(self, 'output', -25, -25),
+            InvisiblePin(self, 'output', 0, 0),
         ]
 
     def draw(self, surface: Surface):
@@ -95,7 +145,7 @@ class Const(Node):
         self.y = y
         self.value = value
         self.pins = [
-            InvisiblePin(self, 'value', -25, -25),
+            InvisiblePin(self, 'value', 0, 0),
         ]
 
     def draw(self, surface: Surface):
@@ -116,10 +166,10 @@ class If(Node):
         self.y = y
         self.text = 'IF'
         self.pins = [
-            Pin(self, 'input1', -50, -75, 'o'),
-            Pin(self, 'input2', 0, -75, 'o'),
-            Pin(self, 'false', -50, 25, 'f'),
-            Pin(self, 'true', 0, 25, 't'),
+            HalfPin(self, 'input1', -25, -25),
+            HalfPin(self, 'input2', 25, -25),
+            HalfTextPin(self, 'false', -25, 25, 'f', 0, 7),
+            HalfTextPin(self, 'true', 25, 25, 't', 0, 7),
         ]
 
     def draw(self, surface: Surface):
@@ -141,9 +191,9 @@ class Operator(Node):
         self.y = y
         self.value = value
         self.pins = [
-            Pin(self, 'input1', -50, -75, 'o'),
-            Pin(self, 'input2', 0, -75, 'o'),
-            Pin(self, 'output', -25, 25, 'o'),
+            HalfPin(self, 'input1', -25, -25),
+            HalfPin(self, 'input2', 25, -25),
+            HalfPin(self, 'output', 0, 25),
         ]
 
     def draw(self, surface: Surface):
@@ -186,7 +236,7 @@ class Edge(Drawable):
         self.end: Pin = end
 
     def draw(self, surface: Surface):
-        draw_arrow(surface, self.start.rect(), self.end.rect(), 5, 10)
+        draw_arrow(surface, self.start.select_rect(), self.end.select_rect(), 5, 10)
 
 
 class Space:
@@ -210,7 +260,7 @@ class Space:
         for obj in self.objects:
             if isinstance(obj, Node):
                 for pin in obj.pins:
-                    rect = pin.rect()
+                    rect = pin.select_rect()
                     if rect.collidepoint(event.pos):
                         return pin, rect
 
