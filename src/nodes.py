@@ -1,6 +1,7 @@
 import pygame
 from pygame import Surface, Rect
 
+import colors
 from camera import camera
 from pins import InvisiblePin, HalfPin, HalfTextPin
 from render import draw_button, draw_circle
@@ -18,7 +19,7 @@ class Input(Node):
         ]
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), 'I')
+        draw_button(surface, self.select_rect(), 'I', colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         half_size = 25
@@ -37,7 +38,7 @@ class Output(Node):
         ]
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), 'O')
+        draw_button(surface, self.select_rect(), 'O', colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         half_size = 25
@@ -81,9 +82,9 @@ class If(Node):
         ]
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.text)
         for pin in self.pins:
             pin.draw(surface)
+        draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         h_width = 50
@@ -105,9 +106,9 @@ class Operator(Node):
         ]
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.value)
         for pin in self.pins:
             pin.draw(surface)
+        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         h_width = 50
@@ -126,9 +127,9 @@ class SubSpace(Node):
         self.space: 'Space' | None = None
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.text)
         for pin in self.pins:
             pin.draw(surface)
+        draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         h_width = 50
@@ -147,9 +148,9 @@ class SelfSpace(Node):
         self.space: 'Space' | None = None
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.text)
         for pin in self.pins:
             pin.draw(surface)
+        draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         h_width = 50

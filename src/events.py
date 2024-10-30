@@ -75,9 +75,9 @@ class MainEvents:
     def trigger_events(self):
         self.event.trigger_events(self)
         for obj in self.selected_objects:
-            pygame.draw.rect(self.window.surface, colors.black, obj.select_rect(), 3)
+            pygame.draw.rect(self.window.surface, colors.white, obj.select_rect(), 4)
         if self.selected_rect:
-            draw_dashed_rect(self.window.surface, colors.black, self.selected_rect, 1, 10)
+            draw_dashed_rect(self.window.surface, colors.white, self.selected_rect, 1, 10)
         if self.link_drag_start:
             draw_link(self.window.surface, self.link_drag_start, pygame.mouse.get_pos(), 5)
 
@@ -220,7 +220,13 @@ class ContextMenuEvents:
     def trigger_events(self):
         self.event.trigger_events(self)
         for rect_params, cls in self.menu_rects.items():
-            draw_button(self.window.surface, pygame.Rect(*rect_params), cls.__name__)
+            draw_button(
+                self.window.surface,
+                pygame.Rect(*rect_params),
+                cls.__name__,
+                colors.menu_bg,
+                colors.menu_text,
+            )
 
     @event.rule(lambda e: e.type == pygame.QUIT)
     def event_game_exit(self, event):

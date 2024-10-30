@@ -3,8 +3,10 @@ import pygame
 import colors
 
 
-def draw_button(surface, rect, text, rect_color=colors.blue, text_color=colors.white):
+def draw_button(surface, rect, text, rect_color, text_color, border_color=None, border_radius=3):
     pygame.draw.rect(surface, rect_color, rect)
+    if border_color:
+        pygame.draw.rect(surface, border_color, rect, border_radius)
     font = pygame.font.Font(None, 24)
     text_surface = font.render(text, True, text_color)
     text_rect = text_surface.get_rect(center=rect.center)
@@ -17,10 +19,11 @@ def draw_circle(
         y: int,
         text: str | None = None,
         radius: int = 25,
-        bg_color=colors.blue,
+        bg_color=colors.space,
         text_color=colors.white,
 ):
     pygame.draw.circle(surface, bg_color, (x, y), radius)
+    pygame.draw.circle(surface, text_color, (x, y), radius, 3)
     if text:
         font = pygame.font.Font(None, 24)
         text = font.render(text, True, text_color)
@@ -28,7 +31,7 @@ def draw_circle(
         surface.blit(text, text_rect)
 
 
-def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=(0, 0, 0)):
+def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=colors.edge):
     start_x, start_y = rect1.center
     end = intersection_with_rectangle(rect2, rect1.center)
     if not end:
@@ -42,7 +45,7 @@ def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=(0, 0, 0)):
     pygame.draw.circle(screen, color, (int(end_x), int(end_y)), circle_radius)
 
 
-def draw_link(screen, from_rect, to_point, thickness, color=(0, 0, 0)):
+def draw_link(screen, from_rect, to_point, thickness, color=colors.edge):
     end_x, end_y = to_point
     start = intersection_with_rectangle(from_rect, to_point)
     if not start:

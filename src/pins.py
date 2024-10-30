@@ -16,7 +16,7 @@ class Pin(BasePin):
         self.text = text
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), self.text)
+        draw_button(surface, self.select_rect(), self.text, colors.pin_bg, colors.pin_text)
 
     def select_rect(self) -> Rect:
         half_size = 25

@@ -12,7 +12,7 @@ def main():
     events = EventManager(space_manager)
     while True:
         pygame.transform.smoothscale(window.surface, window.surface.get_size())
-        window.surface.fill(colors.white)
+        window.surface.fill(colors.space)
         for obj in space_manager.space.objects:
             obj.draw(window.surface)
         events.trigger_events()
