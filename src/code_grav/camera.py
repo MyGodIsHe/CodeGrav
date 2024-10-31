@@ -1,4 +1,4 @@
-from app import Window
+from code_grav.app import Window
 
 
 class Camera:

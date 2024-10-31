@@ -1,4 +1,4 @@
-from nodes import Node
+from code_grav.nodes import Node
 
 
 _LAST_ID = 0

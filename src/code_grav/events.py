@@ -3,14 +3,14 @@ from enum import StrEnum
 
 import pygame
 
-import colors
-from app import Window
-from camera import camera
-from nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
-from render import draw_dashed_rect, draw_button, draw_link
-from space_manager import SpaceManager
-from space_types import Node, BasePin
-from utils import normalize_rect, get_common_center
+from code_grav import colors
+from code_grav.app import Window
+from code_grav.camera import camera
+from code_grav.nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
+from code_grav.render import draw_dashed_rect, draw_button, draw_link
+from code_grav.space_manager import SpaceManager
+from code_grav.space_types import Node, BasePin
+from code_grav.utils import normalize_rect, get_common_center
 
 
 DOUBLE_CLICK_THRESHOLD = 500

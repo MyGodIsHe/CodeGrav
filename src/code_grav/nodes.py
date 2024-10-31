@@ -1,12 +1,12 @@
 import pygame
 from pygame import Surface, Rect
 
-import colors
-from camera import camera
-from pins import InvisiblePin, HalfPin, HalfTextPin
-from render import draw_button, draw_circle
-from space_types import Node
-from utils import get_new_id
+from code_grav import colors
+from code_grav.camera import camera
+from code_grav.pins import InvisiblePin, HalfPin, HalfTextPin
+from code_grav.render import draw_button, draw_circle
+from code_grav.space_types import Node
+from code_grav.utils import get_new_id
 
 
 class Input(Node):

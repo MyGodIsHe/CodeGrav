@@ -1,6 +1,6 @@
 import pygame
 
-import colors
+from code_grav import colors
 
 
 def draw_button(surface, rect, text, rect_color, text_color, border_color=None, border_radius=3):

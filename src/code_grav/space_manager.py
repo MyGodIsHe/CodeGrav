@@ -1,6 +1,6 @@
-from camera import camera
-from space import Space, SubSpace
-from utils import get_common_center
+from code_grav.camera import camera
+from code_grav.space import Space, SubSpace
+from code_grav.utils import get_common_center
 
 
 class SpaceManager:

@@ -4,11 +4,11 @@ from typing import Iterator
 import pygame
 from pygame import Surface
 
-from nodes import SubSpace
-from pins import Pin
-from render import draw_arrow
-from space_types import Drawable, Node, Clickable, BasePin
-from utils import get_new_id
+from code_grav.nodes import SubSpace
+from code_grav.pins import Pin
+from code_grav.render import draw_arrow
+from code_grav.space_types import Drawable, Node, Clickable, BasePin
+from code_grav.utils import get_new_id
 
 
 class Edge(Drawable):

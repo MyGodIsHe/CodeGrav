@@ -1,9 +1,9 @@
 import pygame
 
-import app
-import colors
-from events import EventManager
-from space_manager import SpaceManager
+from code_grav import app
+from code_grav import colors
+from code_grav.events import EventManager
+from code_grav.space_manager import SpaceManager
 
 
 def main():

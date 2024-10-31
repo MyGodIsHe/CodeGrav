@@ -6,6 +6,7 @@ class Window:
 
     def __init__(self):
         pygame.init()
+        pygame.display.set_caption("CodeGrav")
         info = pygame.display.Info()
         self.width = info.current_w
         self.height = info.current_h
