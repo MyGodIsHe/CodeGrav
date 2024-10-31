@@ -7,7 +7,7 @@ from code_grav import colors
 from code_grav.app import Window
 from code_grav.camera import camera
 from code_grav.nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
-from code_grav.render import draw_dashed_rect, draw_button, draw_link
+from code_grav.render import draw_dashed_rect, draw_button, draw_link, draw_flexible_button
 from code_grav.space_manager import SpaceManager
 from code_grav.space_types import Node, BasePin
 from code_grav.utils import normalize_rect, get_common_center
@@ -55,6 +55,10 @@ class EventManager:
 
     def switch_to_context_menu(self, mouse_x: int, mouse_y: int):
         self._current = ContextMenuEvents(self, self.space_manager, mouse_x, mouse_y)
+
+    def switch_to_input(self, callback):
+        w = Window.get()
+        self._current = InputEvents(self, self.space_manager, w.half_width, w.half_height, callback)
 
 
 class MainEvents:
@@ -203,7 +207,7 @@ class ContextMenuEvents:
         self.space_manager: SpaceManager = space_manager
         self.mouse_x = mouse_x
         self.mouse_y = mouse_y
-        width = 80
+        width = 90
         height = 30
         self.menu_rects = {
             (mouse_x, mouse_y + height * i, width, height): cls
@@ -246,8 +250,49 @@ class ContextMenuEvents:
                 break
         if selected_cls:
             x, y = camera.window_to_world(self.mouse_x, self.mouse_y)
-            self.space_manager.space.add_node(selected_cls(x, y))
+            if selected_cls in [Const, Operator, If]:
+                self.event_manager.switch_to_input(
+                    lambda text: self.space_manager.space.add_node(selected_cls(x, y, text))
+                )
+                return
+            else:
+                self.space_manager.space.add_node(selected_cls(x, y))
         self.event_manager.switch_to_main()
+
+
+class InputEvents:
+    event = EventStorage()
+
+    def __init__(self, event_manager: EventManager, space_manager: SpaceManager, x: int, y: int, callback):
+        self.window = Window.get()
+        self.event_manager: EventManager = event_manager
+        self.space_manager: SpaceManager = space_manager
+        self.x = x
+        self.y = y
+        self.callback = callback
+        self.text = ''
+
+    def trigger_events(self):
+        self.event.trigger_events(self)
+        draw_flexible_button(
+            self.window.surface,
+            (self.x, self.y),
+            self.text,
+            colors.menu_bg,
+            colors.menu_text,
+        )
+
+    @event.rule(lambda e: e.type == pygame.KEYDOWN)
+    def event_texting(self, event):
+        if event.key == pygame.K_RETURN:
+            self.callback(self.text)
+            self.event_manager.switch_to_main()
+        elif event.key == pygame.K_BACKSPACE:
+            self.text = self.text[:-1]
+        elif event.key == pygame.K_ESCAPE:
+            self.event_manager.switch_to_main()
+        else:
+            self.text += event.unicode
 
 
 def is_double_click():

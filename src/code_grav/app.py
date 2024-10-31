@@ -10,6 +10,8 @@ class Window:
         info = pygame.display.Info()
         self.width = info.current_w
         self.height = info.current_h
+        self.half_width = self.width / 2
+        self.half_height = self.height / 2
         self.surface = pygame.display.set_mode((self.width, self.height), pygame.NOFRAME)
 
     @classmethod

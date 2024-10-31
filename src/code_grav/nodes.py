@@ -69,11 +69,11 @@ class Const(Node):
 
 
 class If(Node):
-    def __init__(self, x: int, y: int, id: int | None = None):
+    def __init__(self, x: int, y: int, value: str = 'IF', id: int | None = None):
         self.id = id or get_new_id()
         self.x = x
         self.y = y
-        self.text = 'IF'
+        self.text = value
         self.pins = [
             HalfPin(self, 'input1', -25, -25),
             HalfPin(self, 'input2', 25, -25),
