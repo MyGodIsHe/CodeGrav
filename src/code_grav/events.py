@@ -154,6 +154,7 @@ class MainEvents:
             was_select = self.space_manager.space.was_select_rect(event)
             if not was_select:
                 self.event_manager.switch_to_context_menu(*event.pos)
+                self.selected_objects = []
         self.start_drag_pos = None
         self.drag_was_move = False
         self.drag_type = None
@@ -196,6 +197,12 @@ class MainEvents:
         if obj and isinstance(obj, SubSpace):
             self.space_manager.apply(obj)
             self.selected_objects = []
+
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key in [pygame.K_BACKSPACE, pygame.K_DELETE])
+    def event_delete(self, event):
+        for node in self.selected_objects:
+            self.space_manager.space.del_node(node)
+        self.selected_objects = []
 
 
 class ContextMenuEvents:
@@ -255,6 +262,9 @@ class ContextMenuEvents:
                     lambda text: self.space_manager.space.add_node(selected_cls(x, y, text))
                 )
                 return
+            elif selected_cls == SelfSpace:
+                node = selected_cls(x, y, self.space_manager.space)
+                self.space_manager.space.add_node(node)
             else:
                 self.space_manager.space.add_node(selected_cls(x, y))
         self.event_manager.switch_to_main()

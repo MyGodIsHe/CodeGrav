@@ -139,13 +139,21 @@ class SubSpace(Node):
 
 
 class SelfSpace(Node):
-    def __init__(self, x: int, y: int):
-        self.id = id or get_new_id()
+    h_width = 50
+    h_height = 25
+    width = h_width * 2
+    height = h_height * 2
+
+    def __init__(self, x: int, y: int, space: 'Space'):
+        self.id = get_new_id()
         self.x = x
         self.y = y
         self.text = 'SelfSpace'
         self.pins = []
-        self.space: 'Space' | None = None
+        space.add_handlers.append(self.add_node_handler)
+        space.del_handlers.append(self.del_node_handler)
+        for node in space.nodes.values():
+            self.add_node_handler(node)
 
     def draw(self, surface: Surface):
         for pin in self.pins:
@@ -153,7 +161,38 @@ class SelfSpace(Node):
         draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
-        h_width = 50
-        h_height = 25
-        x, y = camera.world_to_window(self.x - h_width, self.y - h_height)
-        return pygame.Rect(x, y, h_width * 2, h_height * 2)
+        x, y = camera.world_to_window(self.x - self.h_width, self.y - self.h_height)
+        return pygame.Rect(x, y, self.width, self.height)
+
+    def add_node_handler(self, node: Node):
+        if isinstance(node, Input):
+            self.pins.append(HalfPin(self, f'input-{node.id}', 0, -25))
+            self.generate_pos_pins('input')
+        elif isinstance(node, Output):
+            self.pins.append(HalfPin(self, f'output-{node.id}', 0, 25))
+            self.generate_pos_pins('output')
+
+    def del_node_handler(self, node: Node):
+        if isinstance(node, Input):
+            self.remove_pin(f'input-{node.id}')
+            self.generate_pos_pins('input')
+        elif isinstance(node, Output):
+            self.remove_pin(f'output-{node.id}')
+            self.generate_pos_pins('output')
+
+    def generate_pos_pins(self, prefix: str):
+        pins = [pin for pin in self.pins if pin.name.startswith(prefix)]
+        total = len(pins)
+        step = self.width / (total + 1)
+        offset = - step * (total - 1) / 2
+        for i, pin in enumerate(pins):
+            pin.x = offset + i * step
+
+    def remove_pin(self, name: str):
+        need_del_pin = None
+        for pin in self.pins:
+            if pin.name == name:
+                need_del_pin = pin
+                break
+        if need_del_pin:
+            self.pins.remove(need_del_pin)

@@ -25,6 +25,8 @@ class Space:
     def __init__(self):
         self.nodes: dict[int, Node] = {}
         self.edges: list[Edge] = []
+        self.add_handlers: list = []
+        self.del_handlers: list = []
 
     @property
     def objects(self) -> Iterator[Drawable]:
@@ -84,6 +86,20 @@ class Space:
 
     def add_node(self, node: Node):
         self.nodes[node.id] = node
+        for handler in self.add_handlers:
+            handler(node)
+
+    def del_node(self, node: Node):
+        del self.nodes[node.id]
+        need_del_edges = set()
+        for pin in node.pins:
+            for edge in self.edges:
+                if pin in [edge.start, edge.end]:
+                    need_del_edges.add(edge)
+        for edge in need_del_edges:
+            self.edges.remove(edge)
+        for handler in self.del_handlers:
+            handler(node)
 
     def save(self, filename: str):
         data = {

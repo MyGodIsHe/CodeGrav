@@ -20,7 +20,8 @@ class Drawable(ABC):
 
 
 class BasePin(Drawable, Clickable, ABC):
-    pass
+    node: 'Node'
+    name: str
 
 
 class Node(Clickable, Drawable, ABC):
