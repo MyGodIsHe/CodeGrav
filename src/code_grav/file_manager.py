@@ -1,4 +1,5 @@
 import json
+import os
 
 from code_grav.nodes import Input, Output, Const, If, Operator, SubSpace, SelfSpace
 from code_grav.pins import BasePin, HalfPin
@@ -103,6 +104,12 @@ def save(root_space: Space, filepath: str):
     with open(filepath, 'w') as f:
         json.dump(data, f)
 
+    with open(os.path.splitext(filepath)[0] + '.g', 'w') as f:
+        for n in root_space.nodes.values():
+            f.write(f'node_{n.id} = {node_to_def(n)}\n')
+        for e in root_space.edges:
+            f.write(edge_to_def(e))
+
 
 def node_to_dict(node: Node) -> dict:
     if isinstance(node, Input):
@@ -183,3 +190,32 @@ def edge_to_dict(edge: Edge) -> dict:
             'pin_name': edge.end.name,
         },
     }
+
+
+def node_to_def(node: Node) -> str:
+    if isinstance(node, Input):
+        return 'input'
+    elif isinstance(node, Output):
+        return 'output'
+    elif isinstance(node, Const):
+        return f'const[{node.value}]'
+    elif isinstance(node, If):
+        return f'if[{node.value}]'
+    elif isinstance(node, Operator):
+        return f'opr[{node.value}]'
+    elif isinstance(node, SubSpace):
+        return 'subspace[]'  # TODO
+    elif isinstance(node, SelfSpace):
+        return 'subspace[self]'
+    raise NotImplemented()
+
+
+def edge_to_def(edge: Edge) -> str:
+    return f'{pin_to_def(edge.start)} >> {pin_to_def(edge.end)}\n'
+
+
+def pin_to_def(pin: BasePin) -> str:
+    if isinstance(pin.node, If):
+        if not pin.name.startswith('input'):
+            return f'node_{pin.node.id}.{pin.name}'
+    return f'node_{pin.node.id}'
