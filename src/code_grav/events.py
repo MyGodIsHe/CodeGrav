@@ -69,7 +69,6 @@ class MainEvents:
         self.space_manager: SpaceManager = space_manager
         self.window = Window.get()
         self.start_drag_pos = None
-        self.drag_was_move = False
         self.drag_type: DragType | None = None
         self.selected_objects: list[Node] = []
         self.selected_rect = None
@@ -125,7 +124,7 @@ class MainEvents:
             self.start_drag_pos = event.pos
             self.drag_type = DragType.rect
 
-    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 3)
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and e.button == 2)
     def event_drag(self, event):
         if not self.drag_type:
             self.start_drag_pos = event.pos
@@ -149,15 +148,19 @@ class MainEvents:
         self.link_drag_start = None
         self.link_drag_pin = None
 
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 2)
+    def event_drop_center(self, event):
+        self.start_drag_pos = None
+        self.drag_type = None
+        self.selected_rect = None
+
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 3)
     def event_drop_right(self, event):
-        if not self.drag_was_move:
-            was_select = self.space_manager.space.was_select_rect(event)
-            if not was_select:
-                self.event_manager.switch_to_context_menu(*event.pos)
-                self.selected_objects = []
+        was_select = self.space_manager.space.was_select_rect(event)
+        if not was_select:
+            self.event_manager.switch_to_context_menu(*event.pos)
+            self.selected_objects = []
         self.start_drag_pos = None
-        self.drag_was_move = False
         self.drag_type = None
         self.selected_rect = None
 
@@ -168,7 +171,6 @@ class MainEvents:
             self.start_drag_pos = event.pos
             camera.x -= dx
             camera.y -= dy
-            self.drag_was_move = True
         elif self.drag_type == DragType.object:
             dx, dy = event.pos[0] - self.start_drag_pos[0], event.pos[1] - self.start_drag_pos[1]
             self.start_drag_pos = event.pos
