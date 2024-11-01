@@ -1,4 +1,3 @@
-import json
 from typing import Iterator
 
 import pygame
@@ -100,31 +99,3 @@ class Space:
             self.edges.remove(edge)
         for handler in self.del_handlers:
             handler(node)
-
-    def save(self, filename: str):
-        data = {
-            'nodes': [
-                {'id': n.id, 'x': n.x, 'y': n.y, 'text': n.text}
-                for n in self.nodes.values()
-            ],
-            'edges': [
-                {'start': e.start.id, 'end': e.end.id}
-                for e in self.edges
-            ],
-        }
-        with open(filename, 'w') as f:
-            json.dump(data, f)
-
-    def load(self, filename: str):
-        global _LAST_ID
-        with open(filename, 'r') as f:
-            data = json.load(f)
-        self.nodes = {
-            n['id']: Node(**n)
-            for n in data['nodes']
-        }
-        self.nodes = [
-            Edge(id=e['id'], start=self.nodes[e['start']], end=self.nodes[e['start']])
-            for e in data['edges']
-        ]
-        _LAST_ID = max(obj.id for obj in self.objects)

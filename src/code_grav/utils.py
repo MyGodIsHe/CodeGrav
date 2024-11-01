@@ -33,3 +33,8 @@ def get_new_id() -> int:
     global _LAST_ID
     _LAST_ID += 1
     return _LAST_ID
+
+
+def set_last_id(value: int):
+    global _LAST_ID
+    _LAST_ID = value

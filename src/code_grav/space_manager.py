@@ -4,8 +4,8 @@ from code_grav.utils import get_common_center
 
 
 class SpaceManager:
-    def __init__(self):
-        self._spaces: list[Space | SubSpace] = [Space()]
+    def __init__(self, space: Space):
+        self._spaces: list[Space | SubSpace] = [space]
 
     @property
     def space(self) -> Space:
@@ -13,6 +13,10 @@ class SpaceManager:
         if isinstance(ss, SubSpace):
             return ss.space
         return ss
+
+    @property
+    def root_space(self):
+        return self._spaces[0]
 
     def apply(self, sub_space: SubSpace):
         self._spaces.append(sub_space)

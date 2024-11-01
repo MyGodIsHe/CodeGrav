@@ -29,3 +29,8 @@ class Node(Clickable, Drawable, ABC):
     x: int
     y: int
     pins: list[BasePin]
+
+    def get_pin_by_name(self, name: str) -> BasePin | None:
+        for pin in self.pins:
+            if pin.name == name:
+                return pin

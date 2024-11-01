@@ -10,8 +10,8 @@ from code_grav.utils import get_new_id
 
 
 class Input(Node):
-    def __init__(self, x: int, y: int, id: int | None = None):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.pins = [
@@ -29,8 +29,8 @@ class Input(Node):
 
 
 class Output(Node):
-    def __init__(self, x: int, y: int, id: int | None = None):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.pins = [
@@ -48,8 +48,8 @@ class Output(Node):
 
 
 class Const(Node):
-    def __init__(self, x: int, y: int, value: str = '1', id: int | None = None):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, value: str = '1', node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.value = value
@@ -69,11 +69,11 @@ class Const(Node):
 
 
 class If(Node):
-    def __init__(self, x: int, y: int, value: str = 'IF', id: int | None = None):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, value: str = 'IF', node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
-        self.text = value
+        self.value = value
         self.pins = [
             HalfPin(self, 'input1', -25, -25),
             HalfPin(self, 'input2', 25, -25),
@@ -84,7 +84,7 @@ class If(Node):
     def draw(self, surface: Surface):
         for pin in self.pins:
             pin.draw(surface)
-        draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
+        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
         h_width = 50
@@ -94,8 +94,8 @@ class If(Node):
 
 
 class Operator(Node):
-    def __init__(self, x: int, y: int, value: str = '+', id: int | None = None):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, value: str = '+', node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.value = value
@@ -118,8 +118,8 @@ class Operator(Node):
 
 
 class SubSpace(Node):
-    def __init__(self, x: int, y: int):
-        self.id = id or get_new_id()
+    def __init__(self, x: int, y: int, node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.text = 'SubSpace'
@@ -144,8 +144,8 @@ class SelfSpace(Node):
     width = h_width * 2
     height = h_height * 2
 
-    def __init__(self, x: int, y: int, space: 'Space'):
-        self.id = get_new_id()
+    def __init__(self, x: int, y: int, space: 'Space', node_id: int | None = None):
+        self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.text = 'SelfSpace'

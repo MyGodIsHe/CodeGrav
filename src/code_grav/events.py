@@ -3,7 +3,7 @@ from enum import StrEnum
 
 import pygame
 
-from code_grav import colors
+from code_grav import colors, file_manager
 from code_grav.app import Window
 from code_grav.camera import camera
 from code_grav.nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
@@ -42,9 +42,9 @@ class EventStorage:
 
 
 class EventManager:
-    def __init__(self, space_manager: SpaceManager):
+    def __init__(self, space_manager: SpaceManager, filepath: str | None):
         self.space_manager = space_manager
-        self._main = MainEvents(self, space_manager)
+        self._main = MainEvents(self, space_manager, filepath)
         self._current = self._main
 
     def trigger_events(self):
@@ -64,7 +64,7 @@ class EventManager:
 class MainEvents:
     event = EventStorage()
 
-    def __init__(self, event_manager: EventManager, space_manager: SpaceManager):
+    def __init__(self, event_manager: EventManager, space_manager: SpaceManager, filepath: str | None):
         self.event_manager = event_manager
         self.space_manager: SpaceManager = space_manager
         self.window = Window.get()
@@ -75,6 +75,7 @@ class MainEvents:
         self.selected_rect = None
         self.link_drag_start: pygame.Rect | None = None
         self.link_drag_pin: BasePin | None = None
+        self.filepath = filepath
 
     def trigger_events(self):
         self.event.trigger_events(self)
@@ -203,6 +204,15 @@ class MainEvents:
         for node in self.selected_objects:
             self.space_manager.space.del_node(node)
         self.selected_objects = []
+
+    @event.rule(lambda e: (
+            e.type == pygame.KEYDOWN
+            and e.key == pygame.K_s
+            and pygame.key.get_mods() & pygame.KMOD_CTRL
+    ))
+    def event_save_to_file(self, event):
+        if self.filepath:
+            file_manager.save(self.space_manager.root_space, self.filepath)
 
 
 class ContextMenuEvents:
