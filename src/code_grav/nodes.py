@@ -3,48 +3,111 @@ from pygame import Surface, Rect
 
 from code_grav import colors
 from code_grav.camera import camera
-from code_grav.pins import InvisiblePin, HalfPin, HalfTextPin
-from code_grav.render import draw_button, draw_circle
-from code_grav.space_types import Node
-from code_grav.utils import get_new_id
+from code_grav.sync_pins import SyncPins
+from code_grav.pins import InvisiblePin, HalfPin, HalfTextPin, NamedOutputPin, NamedInputPin
+from code_grav.render import draw_button, draw_circle, draw_text_top_button
+from code_grav.space_types import Node, ContextMenuItems, SpaceProtocol, BasePin
+from code_grav.utils import get_new_id, get_max_pin_id, generate_pos_pins
 
 
 class Input(Node):
-    def __init__(self, x: int, y: int, node_id: int | None = None):
+    half_width = 50
+    width = half_width * 2
+
+    def __init__(self, pin_events: SyncPins, x: int, y: int, node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
+        self.pin_events = pin_events
+        self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            InvisiblePin(self, 'input', 0, 0),
+            NamedOutputPin(self, '1', '1', self.half_width, 0),
         ]
+        self.height = generate_pos_pins(self.pins, 100 - 15, 15)
+        self.half_height = self.height // 2
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), 'I', colors.space, colors.node_text, colors.node_border)
+        draw_text_top_button(surface, self.select_rect(), 'Input', colors.space, colors.node_text, colors.node_border)
+        for pin in self.pins:
+            pin.draw(surface)
 
     def select_rect(self) -> Rect:
-        half_size = 25
-        size = half_size * 2
-        x, y = camera.world_to_window(self.x - half_size, self.y - half_size)
-        return pygame.Rect(x, y, size, size)
+        x, y = camera.world_to_window(self.x - self.half_width, self.y - self.half_height)
+        return pygame.Rect(x, y, self.width, self.height)
+
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("new pin", self.on_new_pin),
+        ]
+
+    def _new_pin(self, pin_name: str) -> BasePin | None:
+        for pin in self.pins:
+            if pin.name == pin_name:
+                return
+        pin = NamedOutputPin(self, pin_name, pin_name, self.half_width, 0)
+        self.pins.append(pin)
+        self.height = generate_pos_pins(self.pins, self.height - 15, 15)
+        self.half_height = self.height // 2
+        return pin
+
+    def on_new_pin(self, space: SpaceProtocol):
+        max_int = get_max_pin_id(self.pins) + 1
+        pin = self._new_pin(str(max_int))
+        if pin:
+            self.pin_events.add_pin(pin.name)
+
+    def add_pin_handler(self, pin_name: str):
+        self._new_pin(pin_name)
 
 
 class Output(Node):
-    def __init__(self, x: int, y: int, node_id: int | None = None):
+    half_width = 50
+    width = half_width * 2
+
+    def __init__(self, pin_events: SyncPins, x: int, y: int, node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
+        self.pin_events = pin_events
+        self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            InvisiblePin(self, 'output', 0, 0),
+            NamedInputPin(self, '1', '1', -self.half_width, 0),
         ]
+        self.height = generate_pos_pins(self.pins, 100 - 15, 15)
+        self.half_height = self.height // 2
 
     def draw(self, surface: Surface):
-        draw_button(surface, self.select_rect(), 'O', colors.space, colors.node_text, colors.node_border)
+        draw_text_top_button(surface, self.select_rect(), 'Output', colors.space, colors.node_text, colors.node_border)
+        for pin in self.pins:
+            pin.draw(surface)
 
     def select_rect(self) -> Rect:
-        half_size = 25
-        size = half_size * 2
-        x, y = camera.world_to_window(self.x - half_size, self.y - half_size)
-        return pygame.Rect(x, y, size, size)
+        x, y = camera.world_to_window(self.x - self.half_width, self.y - self.half_height)
+        return pygame.Rect(x, y, self.width, self.height)
+
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("new pin", self.on_new_pin),
+        ]
+
+    def _new_pin(self, pin_name: str) -> BasePin | None:
+        for pin in self.pins:
+            if pin.name == pin_name:
+                return
+        pin = NamedInputPin(self, pin_name, pin_name, -self.half_width, 0)
+        self.pins.append(pin)
+        self.height = generate_pos_pins(self.pins, self.height - 15, 15)
+        self.half_height = self.height // 2
+        return pin
+
+    def on_new_pin(self, space: SpaceProtocol):
+        max_int = get_max_pin_id(self.pins) + 1
+        pin = self._new_pin(str(max_int))
+        if pin:
+            self.pin_events.add_pin(pin.name)
+
+    def add_pin_handler(self, pin_name: str):
+        self._new_pin(pin_name)
 
 
 class Const(Node):
@@ -67,54 +130,75 @@ class Const(Node):
         x, y = camera.world_to_window(self.x - half_size, self.y - half_size)
         return pygame.Rect(x, y, size, size)
 
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("delete node", lambda space: space.del_node(self)),
+        ]
+
 
 class If(Node):
+    half_width = 70
+    width = half_width * 2
+    half_height = 60
+    height = half_height * 2
+
     def __init__(self, x: int, y: int, value: str = 'IF', node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.value = value
         self.pins = [
-            HalfPin(self, 'input1', -25, -25),
-            HalfPin(self, 'input2', 25, -25),
-            HalfTextPin(self, 'false', -25, 25, 'f', 0, 7),
-            HalfTextPin(self, 'true', 25, 25, 't', 0, 7),
+            NamedInputPin(self, 'first', None, -self.half_width, -25),
+            NamedInputPin(self, 'second', None, -self.half_width, 25),
+            NamedOutputPin(self, 'true', 'true', self.half_width, -25),
+            NamedOutputPin(self, 'false', 'false', self.half_width, 25),
         ]
 
     def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
         for pin in self.pins:
             pin.draw(surface)
-        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
-        h_width = 50
-        h_height = 25
-        x, y = camera.world_to_window(self.x - h_width, self.y - h_height)
-        return pygame.Rect(x, y, h_width * 2, h_height * 2)
+        x, y = camera.world_to_window(self.x - self.half_width, self.y - self.half_height)
+        return pygame.Rect(x, y, self.width, self.height)
+
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("delete node", lambda space: space.del_node(self)),
+        ]
 
 
 class Operator(Node):
+    half_width = 70
+    width = half_width * 2
+    half_height = 50
+    height = half_height * 2
+
     def __init__(self, x: int, y: int, value: str = '+', node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.value = value
         self.pins = [
-            HalfPin(self, 'input1', -25, -25),
-            HalfPin(self, 'input2', 25, -25),
-            HalfPin(self, 'output', 0, 25),
+            NamedInputPin(self, 'first', None, -self.half_width, -25),
+            NamedInputPin(self, 'second', None, -self.half_width, 25),
+            NamedOutputPin(self, 'output', None, self.half_width, 0),
         ]
 
     def draw(self, surface: Surface):
+        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
         for pin in self.pins:
             pin.draw(surface)
-        draw_button(surface, self.select_rect(), self.value, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
-        h_width = 50
-        h_height = 25
-        x, y = camera.world_to_window(self.x - h_width, self.y - h_height)
-        return pygame.Rect(x, y, h_width * 2, h_height * 2)
+        x, y = camera.world_to_window(self.x - self.half_width, self.y - self.half_height)
+        return pygame.Rect(x, y, self.width, self.height)
+
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("delete node", lambda space: space.del_node(self)),
+        ]
 
 
 class SubSpace(Node):
@@ -137,31 +221,48 @@ class SubSpace(Node):
         x, y = camera.world_to_window(self.x - h_width, self.y - h_height)
         return pygame.Rect(x, y, h_width * 2, h_height * 2)
 
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("delete node", lambda space: space.del_node(self)),
+        ]
+
 
 class SelfSpace(Node):
-    h_width = 50
-    h_height = 25
-    width = h_width * 2
-    height = h_height * 2
+    half_width = 50
+    width = half_width * 2
+    half_height = 25
+    height = half_height * 2
 
     def __init__(self, x: int, y: int, space: 'Space', node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
-        self.text = 'SelfSpace'
-        self.pins = []
-        space.add_handlers.append(self.add_node_handler)
-        space.del_handlers.append(self.del_node_handler)
-        for node in space.nodes.values():
-            self.add_node_handler(node)
+        self.input_pins = []
+        self.output_pins = []
+        self.space = space
+        space.sync_input_pins.add_handlers.append(self.add_input_pin_handler)
+        space.sync_output_pins.add_handlers.append(self.add_output_pin_handler)
+        for pin in space.input_node.pins:
+            self._new_input_pin(pin.name)
+        for pin in space.output_node.pins:
+            self._new_output_pin(pin.name)
+        self.height = max(
+            generate_pos_pins(self.input_pins, 100 - 15, 15),
+            generate_pos_pins(self.output_pins, 100 - 15, 15),
+        )
+        self.half_height = self.height // 2
+
+    @property
+    def pins(self) -> list[BasePin]:
+        return self.input_pins + self.output_pins
 
     def draw(self, surface: Surface):
+        draw_text_top_button(surface, self.select_rect(), 'SelfSpace', colors.space, colors.node_text, colors.node_border)
         for pin in self.pins:
             pin.draw(surface)
-        draw_button(surface, self.select_rect(), self.text, colors.space, colors.node_text, colors.node_border)
 
     def select_rect(self) -> Rect:
-        x, y = camera.world_to_window(self.x - self.h_width, self.y - self.h_height)
+        x, y = camera.world_to_window(self.x - self.half_width, self.y - self.half_height)
         return pygame.Rect(x, y, self.width, self.height)
 
     def add_node_handler(self, node: Node):
@@ -172,27 +273,51 @@ class SelfSpace(Node):
             self.pins.append(HalfPin(self, f'output-{node.id}', 0, 25))
             self.generate_pos_pins('output')
 
-    def del_node_handler(self, node: Node):
-        if isinstance(node, Input):
-            self.remove_pin(f'input-{node.id}')
-            self.generate_pos_pins('input')
-        elif isinstance(node, Output):
-            self.remove_pin(f'output-{node.id}')
-            self.generate_pos_pins('output')
-
     def generate_pos_pins(self, prefix: str):
         pins = [pin for pin in self.pins if pin.name.startswith(prefix)]
-        total = len(pins)
-        step = self.width / (total + 1)
-        offset = - step * (total - 1) / 2
-        for i, pin in enumerate(pins):
-            pin.x = offset + i * step
+        generate_pos_pins(pins, self.height, 0)
 
-    def remove_pin(self, name: str):
-        need_del_pin = None
-        for pin in self.pins:
-            if pin.name == name:
-                need_del_pin = pin
-                break
-        if need_del_pin:
-            self.pins.remove(need_del_pin)
+    def get_context_menu_items(self) -> ContextMenuItems:
+        return [
+            ("new input pin", self.on_new_input_pin),
+            ("new output pin", self.on_new_output_pin),
+            ("delete node", lambda space: space.del_node(self)),
+        ]
+
+    def _new_input_pin(self, pin_name: str) -> BasePin | None:
+        for pin in self.input_pins:
+            if pin.name == pin_name:
+                return
+        pin = NamedInputPin(self, pin_name, pin_name, -self.half_width, 0)
+        self.input_pins.append(pin)
+        self.height = generate_pos_pins(self.input_pins, self.height - 15, 15)
+        self.half_height = self.height // 2
+        return pin
+
+    def on_new_input_pin(self, space: SpaceProtocol):
+        max_int = get_max_pin_id(self.input_pins) + 1
+        pin = self._new_input_pin(str(max_int))
+        if pin:
+            self.space.sync_input_pins.add_pin(pin.name)
+
+    def add_input_pin_handler(self, pin_name: str):
+        self._new_input_pin(pin_name)
+
+    def _new_output_pin(self, pin_name: str) -> BasePin | None:
+        for pin in self.output_pins:
+            if pin.name == pin_name:
+                return
+        pin = NamedOutputPin(self, pin_name, pin_name, self.half_width, 0)
+        self.output_pins.append(pin)
+        self.height = generate_pos_pins(self.output_pins, self.height - 15, 15)
+        self.half_height = self.height // 2
+        return pin
+
+    def on_new_output_pin(self, space: SpaceProtocol):
+        max_int = get_max_pin_id(self.output_pins) + 1
+        pin = self._new_output_pin(str(max_int))
+        if pin:
+            self.space.sync_output_pins.add_pin(pin.name)
+
+    def add_output_pin_handler(self, pin_name: str):
+        self._new_output_pin(pin_name)

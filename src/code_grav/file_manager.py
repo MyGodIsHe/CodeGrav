@@ -31,12 +31,14 @@ def load_or_new(filepath: str):
 def dict_to_node(space: Space, data: dict) -> Node:
     if data['name'] == 'Input':
         return Input(
+            pin_events=space.sync_input_pins,
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
         )
     elif data['name'] == 'Output':
         return Output(
+            pin_events=space.sync_output_pins,
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
@@ -216,6 +218,6 @@ def edge_to_def(edge: Edge) -> str:
 
 def pin_to_def(pin: BasePin) -> str:
     if isinstance(pin.node, If):
-        if not pin.name.startswith('input'):
+        if not pin.name not in ['true', 'false']:
             return f'node_{pin.node.id}.{pin.name}'
     return f'node_{pin.node.id}'

@@ -53,8 +53,11 @@ class EventManager:
     def switch_to_main(self):
         self._current = self._main
 
-    def switch_to_context_menu(self, mouse_x: int, mouse_y: int):
-        self._current = ContextMenuEvents(self, self.space_manager, mouse_x, mouse_y)
+    def switch_to_space_context_menu(self, mouse_x: int, mouse_y: int):
+        self._current = SpaceContextMenuEvents(self, self.space_manager, mouse_x, mouse_y)
+
+    def switch_to_node_context_menu(self, node: Node, mouse_x: int, mouse_y: int):
+        self._current = NodeContextMenuEvents(self, self.space_manager, node, mouse_x, mouse_y)
 
     def switch_to_input(self, callback):
         w = Window.get()
@@ -157,9 +160,11 @@ class MainEvents:
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 3)
     def event_drop_right(self, event):
         was_select = self.space_manager.space.was_select_rect(event)
-        if not was_select:
-            self.event_manager.switch_to_context_menu(*event.pos)
-            self.selected_objects = []
+        if was_select:
+            self.event_manager.switch_to_node_context_menu(was_select, *event.pos)
+        else:
+            self.event_manager.switch_to_space_context_menu(*event.pos)
+        self.selected_objects = []
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
@@ -217,7 +222,7 @@ class MainEvents:
             file_manager.save(self.space_manager.root_space, self.filepath)
 
 
-class ContextMenuEvents:
+class SpaceContextMenuEvents:
     event = EventStorage()
 
     def __init__(self, event_manager: EventManager, space_manager: SpaceManager, mouse_x: int, mouse_y: int):
@@ -235,8 +240,6 @@ class ContextMenuEvents:
                 Operator,
                 If,
                 SelfSpace,
-                Input,
-                Output,
             ])
         }
 
@@ -261,7 +264,7 @@ class ContextMenuEvents:
         sys.exit()
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 1)
-    def event_select_node(self, event):
+    def event_select(self, event):
         selected_cls = None
         for rect_params, cls in self.menu_rects.items():
             if pygame.Rect(*rect_params).collidepoint(event.pos):
@@ -279,6 +282,68 @@ class ContextMenuEvents:
                 self.space_manager.space.add_node(node)
             else:
                 self.space_manager.space.add_node(selected_cls(x, y))
+        self.event_manager.switch_to_main()
+
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button != 1)
+    def event_click_escape(self, event):
+        self.event_manager.switch_to_main()
+
+
+class NodeContextMenuEvents:
+    event = EventStorage()
+
+    def __init__(self, event_manager: EventManager, space_manager: SpaceManager, node: Node, mouse_x: int, mouse_y: int):
+        self.window = Window.get()
+        self.event_manager: EventManager = event_manager
+        self.space_manager: SpaceManager = space_manager
+        self.mouse_x = mouse_x
+        self.mouse_y = mouse_y
+        width = 120
+        height = 30
+        self.menu_rects = {
+            (mouse_x, mouse_y + height * i, width, height): value
+            for i, value in enumerate(node.get_context_menu_items())
+        }
+
+    def trigger_events(self):
+        self.event.trigger_events(self)
+        for rect_params, (name, _) in self.menu_rects.items():
+            draw_button(
+                self.window.surface,
+                pygame.Rect(*rect_params),
+                name,
+                colors.menu_bg,
+                colors.menu_text,
+            )
+
+    def new_pin(self):
+        pass
+
+    def delete_node(self):
+        pass
+
+    @event.rule(lambda e: e.type == pygame.QUIT)
+    def event_game_exit(self, event):
+        sys.exit()
+
+    @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
+    def event_escape(self, event):
+        pygame.quit()
+        sys.exit()
+
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 1)
+    def event_select(self, event):
+        selected_func = None
+        for rect_params, (_, func) in self.menu_rects.items():
+            if pygame.Rect(*rect_params).collidepoint(event.pos):
+                selected_func = func
+                break
+        if selected_func:
+            selected_func(self.space_manager.space)
+        self.event_manager.switch_to_main()
+
+    @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button != 1)
+    def event_click_escape(self, event):
         self.event_manager.switch_to_main()
 
 

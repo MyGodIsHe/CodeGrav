@@ -13,6 +13,17 @@ def draw_button(surface, rect, text, rect_color, text_color, border_color=None, 
     surface.blit(text_surface, text_rect)
 
 
+def draw_text_top_button(surface, rect, text, rect_color, text_color, border_color=None, border_radius=3):
+    pygame.draw.rect(surface, rect_color, rect)
+    if border_color:
+        pygame.draw.rect(surface, border_color, rect, border_radius)
+    font = pygame.font.Font(None, 24)
+    text_surface = font.render(text, True, text_color)
+    text_x = rect.center[0] - text_surface.get_width() // 2
+    text_y = rect.top + 10
+    surface.blit(text_surface, (text_x, text_y))
+
+
 def draw_flexible_button(surface, center, text, rect_color, text_color, border_color=None, border_radius=3, padding=10):
     x, y = center
     font = pygame.font.Font(None, 24)

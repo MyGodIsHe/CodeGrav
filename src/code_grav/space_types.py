@@ -1,6 +1,20 @@
 from abc import ABC, abstractmethod
+from typing import Callable, Protocol, TypeAlias
 
 from pygame import Rect, Surface
+
+
+class SpaceProtocol(Protocol):
+    @abstractmethod
+    def add_node(self, node: 'Node'):
+        pass
+
+    @abstractmethod
+    def del_node(self, node: 'Node'):
+        pass
+
+
+ContextMenuItems: TypeAlias = list[tuple[str, Callable[[SpaceProtocol], None]]]
 
 
 class Clickable(ABC):
@@ -22,6 +36,7 @@ class Drawable(ABC):
 class BasePin(Drawable, Clickable, ABC):
     node: 'Node'
     name: str
+    radius: int = 15
 
 
 class Node(Clickable, Drawable, ABC):
@@ -34,3 +49,7 @@ class Node(Clickable, Drawable, ABC):
         for pin in self.pins:
             if pin.name == name:
                 return pin
+
+    @abstractmethod
+    def get_context_menu_items(self) -> ContextMenuItems:
+        pass
