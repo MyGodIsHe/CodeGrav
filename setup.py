@@ -14,7 +14,6 @@ setup(
     package_dir={'': 'src'},
     install_requires=[
         "pygame==2.5.2",
-        "moderngl==5.12.0",
     ],
     entry_points={
         "console_scripts": [
