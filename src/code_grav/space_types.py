@@ -3,8 +3,17 @@ from typing import Callable, Protocol, TypeAlias, Sequence
 
 from pygame import Rect, Surface
 
+from code_grav.sync_pins import SyncPins
+
 
 class SpaceProtocol(Protocol):
+    sync_input_pins: SyncPins
+    sync_output_pins: SyncPins
+    input_node: 'Node'
+    output_node: 'Node'
+    nodes: dict[str, 'Node']
+    edges: list['BaseEdge']
+
     @abstractmethod
     def add_node(self, node: 'Node'):
         pass
@@ -39,17 +48,29 @@ class BasePin(Drawable, Clickable, ABC):
     radius: int = 15
 
 
+class BaseNamedPin(BasePin, ABC):
+    title: str
+
+
 class Node(Clickable, Drawable, ABC):
     id: int
     x: int
     y: int
-    pins: Sequence[BasePin]
-
-    def get_pin_by_name(self, name: str) -> BasePin | None:
-        for pin in self.pins:
-            if pin.name == name:
-                return pin
 
     @abstractmethod
     def get_context_menu_items(self) -> ContextMenuItems:
+        pass
+
+    @property
+    @abstractmethod
+    def pins(self) -> Sequence[BasePin]:
+        pass
+
+
+class BaseEdge(Drawable, ABC):
+    start: BasePin
+    end: BasePin
+
+    @abstractmethod
+    def draw(self, surface: Surface):
         pass

@@ -4,7 +4,7 @@ from pygame import Surface, Rect
 from code_grav import colors
 from code_grav.camera import camera
 from code_grav.render import draw_button, draw_circle
-from code_grav.space_types import Node, BasePin
+from code_grav.space_types import Node, BasePin, BaseNamedPin
 
 
 class Pin(BasePin):
@@ -57,21 +57,21 @@ class InvisiblePin(Pin):
         return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
-class InputPin(BasePin):
-    def __init__(self, node: Node, name: str, text: str | None, x: int, y: int):
+class InputPin(BaseNamedPin):
+    def __init__(self, node: Node, name: str, title: str | None, x: int, y: int):
         self.node: Node = node
         self.name = name
         self.x = x
         self.y = y
-        self.text = text
+        self.title = title
 
     def draw(self, surface: Surface):
         x, y = self.node.x + self.x, self.node.y + self.y
         x, y = camera.world_to_window(x, y)
         draw_circle(surface, x, y, radius=self.radius)
-        if self.text:
+        if self.title:
             font = pygame.font.Font(None, 18)
-            text_surface = font.render(self.text, True, colors.white)
+            text_surface = font.render(self.title, True, colors.white)
             text_x = x + 10 + self.radius
             text_y = y - text_surface.get_height() // 2
             surface.blit(text_surface, (text_x, text_y))
@@ -83,21 +83,21 @@ class InputPin(BasePin):
         return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
-class OutputPin(BasePin):
-    def __init__(self, node: Node, name: str, text: str | None, x: int, y: int):
+class OutputPin(BaseNamedPin):
+    def __init__(self, node: Node, name: str, title: str | None, x: int, y: int):
         self.node: Node = node
         self.name = name
         self.x = x
         self.y = y
-        self.text = text
+        self.title = title
 
     def draw(self, surface: Surface):
         x, y = self.node.x + self.x, self.node.y + self.y
         x, y = camera.world_to_window(x, y)
         draw_circle(surface, x, y, radius=self.radius)
-        if self.text:
+        if self.title:
             font = pygame.font.Font(None, 18)
-            text_surface = font.render(self.text, True, colors.white)
+            text_surface = font.render(self.title, True, colors.white)
             text_x = x - text_surface.get_width() - 10 - self.radius
             text_y = y - text_surface.get_height() // 2
             surface.blit(text_surface, (text_x, text_y))

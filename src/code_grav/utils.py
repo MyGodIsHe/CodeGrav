@@ -63,3 +63,9 @@ def generate_pos_pins(pins: Sequence[BasePin], height: int, top_offset: int) -> 
     for i, pin in enumerate(pins):
         pin.y = top_offset + offset + i * step
     return top_offset + height
+
+
+def get_pin_by_name(pins: Sequence[BasePin], name: str) -> BasePin | None:
+    for pin in pins:
+        if pin.name == name:
+            return pin

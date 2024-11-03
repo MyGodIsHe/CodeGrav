@@ -19,7 +19,7 @@ def main():
     if filepath:
         space_manager = file_manager.load_or_new(filepath)
     else:
-        space_manager = SpaceManager(Space())
+        space_manager = SpaceManager(Space([('input1', '1')], [('output1', '1')]))
     events = EventManager(space_manager, filepath)
     while True:
         pygame.transform.smoothscale(window.surface, window.surface.get_size())

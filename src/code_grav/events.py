@@ -89,11 +89,11 @@ class MainEvents:
             draw_link(self.window.surface, self.link_drag_start, pygame.mouse.get_pos(), 5)
 
     @event.rule(lambda e: e.type == pygame.QUIT)
-    def event_game_exit(self, event):
+    def event_game_exit(self, _):
         sys.exit()
 
     @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
-    def event_escape(self, event):
+    def event_escape(self, _):
         if self.space_manager.rollback():
             self.selected_objects = []
         else:
@@ -152,7 +152,7 @@ class MainEvents:
         self.link_drag_pin = None
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button == 2)
-    def event_drop_center(self, event):
+    def event_drop_center(self, _):
         self.start_drag_pos = None
         self.drag_type = None
         self.selected_rect = None
@@ -189,14 +189,12 @@ class MainEvents:
             ))
 
     @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_g)
-    def event_create_subspace(self, event):
+    def event_create_subspace(self, _):
         if not self.selected_objects:
             return
         x, y = get_common_center(self.selected_objects)
         x, y = camera.window_to_world(x, y)
-        ss = SubSpace(x, y)
-        self.space_manager.space.add_node(ss)
-        ss.space = self.space_manager.space.merge_nodes([obj.id for obj in self.selected_objects], ss)
+        ss = self.space_manager.space.new_subspace_from_nodes(x, y, [obj.id for obj in self.selected_objects])
         self.selected_objects = [ss]
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONDOWN and is_double_click())
@@ -207,7 +205,7 @@ class MainEvents:
             self.selected_objects = []
 
     @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key in [pygame.K_BACKSPACE, pygame.K_DELETE])
-    def event_delete(self, event):
+    def event_delete(self, _):
         for node in self.selected_objects:
             self.space_manager.space.del_node(node)
         self.selected_objects = []
@@ -217,7 +215,7 @@ class MainEvents:
             and e.key == pygame.K_s
             and pygame.key.get_mods() & pygame.KMOD_CTRL
     ))
-    def event_save_to_file(self, event):
+    def event_save_to_file(self, _):
         if self.filepath:
             file_manager.save(self.space_manager.root_space, self.filepath)
 
@@ -255,11 +253,11 @@ class SpaceContextMenuEvents:
             )
 
     @event.rule(lambda e: e.type == pygame.QUIT)
-    def event_game_exit(self, event):
+    def event_game_exit(self, _):
         sys.exit()
 
     @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
-    def event_escape(self, event):
+    def event_escape(self, _):
         pygame.quit()
         sys.exit()
 
@@ -281,8 +279,8 @@ class SpaceContextMenuEvents:
                 node = selected_cls(
                     x,
                     y,
-                    [pin.name for pin in self.space_manager.space.input_node.pins],
-                    [pin.name for pin in self.space_manager.space.output_node.pins],
+                    [(pin.name, pin.title) for pin in self.space_manager.space.input_node.pins],
+                    [(pin.name, pin.title) for pin in self.space_manager.space.output_node.pins],
                 )
                 self.space_manager.space.sync_input_pins.add_handlers.append(node.add_input_pin_handler)
                 self.space_manager.space.sync_output_pins.add_handlers.append(node.add_output_pin_handler)
@@ -292,14 +290,21 @@ class SpaceContextMenuEvents:
         self.event_manager.switch_to_main()
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button != 1)
-    def event_click_escape(self, event):
+    def event_click_escape(self, _):
         self.event_manager.switch_to_main()
 
 
 class NodeContextMenuEvents:
     event = EventStorage()
 
-    def __init__(self, event_manager: EventManager, space_manager: SpaceManager, node: Node, mouse_x: int, mouse_y: int):
+    def __init__(
+            self,
+            event_manager: EventManager,
+            space_manager: SpaceManager,
+            node: Node,
+            mouse_x: int,
+            mouse_y: int,
+    ):
         self.window = Window.get()
         self.event_manager: EventManager = event_manager
         self.space_manager: SpaceManager = space_manager
@@ -330,11 +335,11 @@ class NodeContextMenuEvents:
         pass
 
     @event.rule(lambda e: e.type == pygame.QUIT)
-    def event_game_exit(self, event):
+    def event_game_exit(self, _):
         sys.exit()
 
     @event.rule(lambda e: e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE)
-    def event_escape(self, event):
+    def event_escape(self, _):
         pygame.quit()
         sys.exit()
 
@@ -350,7 +355,7 @@ class NodeContextMenuEvents:
         self.event_manager.switch_to_main()
 
     @event.rule(lambda e: e.type == pygame.MOUSEBUTTONUP and e.button != 1)
-    def event_click_escape(self, event):
+    def event_click_escape(self, _):
         self.event_manager.switch_to_main()
 
 

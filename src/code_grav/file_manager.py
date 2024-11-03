@@ -6,11 +6,11 @@ from code_grav.pins import BasePin
 from code_grav.space import Space, Edge
 from code_grav.space_manager import SpaceManager
 from code_grav.space_types import Node
-from code_grav.utils import set_last_id
+from code_grav.utils import set_last_id, get_pin_by_name
 
 
 def load_or_new(filepath: str):
-    sm = SpaceManager(Space())
+    sm = SpaceManager(Space([('input1', '1')], [('output1', '1')]))
     try:
         with open(filepath, 'r') as f:
             data = json.load(f)
@@ -35,7 +35,7 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
-            pins=[pin['name'] for pin in data['pins']],
+            pins=[(pin['name'], pin['title']) for pin in data['pins']],
         )
     elif data['name'] == 'Output':
         return Output(
@@ -43,7 +43,7 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
-            pins=[pin['name'] for pin in data['pins']],
+            pins=[(pin['name'], pin['title']) for pin in data['pins']],
         )
     elif data['name'] == 'Const':
         return Const(
@@ -71,15 +71,23 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
+            input_pins=[(pin['name'], pin['title']) for pin in data['input_pins']],
+            output_pins=[(pin['name'], pin['title']) for pin in data['output_pins']],
+            space=Space(
+                [(pin['name'], pin['title']) for pin in data['input_pins']],
+                [(pin['name'], pin['title']) for pin in data['output_pins']],
+            )
         )
+        ss.space.sync_input_pins.add_handlers.append(ss.add_input_pin_handler)
+        ss.space.sync_output_pins.add_handlers.append(ss.add_output_pin_handler)
         return ss
     elif data['name'] == 'SelfSpace':
         ss = SelfSpace(
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
-            input_pins=data['input_pins'],
-            output_pins=data['output_pins'],
+            input_pins=[(pin['name'], pin['title']) for pin in data['input_pins']],
+            output_pins=[(pin['name'], pin['title']) for pin in data['output_pins']],
         )
         space.sync_input_pins.add_handlers.append(ss.add_input_pin_handler)
         space.sync_output_pins.add_handlers.append(ss.add_output_pin_handler)
@@ -90,28 +98,29 @@ def dict_to_node(space: Space, data: dict) -> Node:
 def dict_to_edge(space: Space, data: dict) -> tuple[BasePin, BasePin]:
     start = space.nodes[data['start']['node_id']]
     end = space.nodes[data['end']['node_id']]
-    return start.get_pin_by_name(data['start']['pin_name']), end.get_pin_by_name(data['end']['pin_name'])
+    return get_pin_by_name(start.pins, data['start']['pin_name']), get_pin_by_name(end.pins, data['end']['pin_name'])
 
 
 def save(root_space: Space, filepath: str):
-    data = {
-        'nodes': [
-            node_to_dict(n)
-            for n in root_space.nodes.values()
-        ],
-        'edges': [
-            edge_to_dict(e)
-            for e in root_space.edges
-        ],
-    }
+    data = space_to_dict(root_space)
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
 
     with open(os.path.splitext(filepath)[0] + '.g', 'w') as f:
-        for n in root_space.nodes.values():
-            f.write(f'node_{n.id} = {node_to_def(n)}\n')
-        for e in root_space.edges:
-            f.write(edge_to_def(e))
+        f.write(space_to_def(root_space))
+
+
+def space_to_dict(space):
+    return {
+        'nodes': [
+            node_to_dict(n)
+            for n in space.nodes.values()
+        ],
+        'edges': [
+            edge_to_dict(e)
+            for e in space.edges
+        ],
+    }
 
 
 def node_to_dict(node: Node) -> dict:
@@ -124,6 +133,7 @@ def node_to_dict(node: Node) -> dict:
             'pins': [
                 {
                     'name': pin.name,
+                    'title': pin.title,
                 }
                 for pin in node.pins
             ],
@@ -137,6 +147,7 @@ def node_to_dict(node: Node) -> dict:
             'pins': [
                 {
                     'name': pin.name,
+                    'title': pin.title,
                 }
                 for pin in node.pins
             ],
@@ -171,12 +182,21 @@ def node_to_dict(node: Node) -> dict:
             'id': node.id,
             'x': node.x,
             'y': node.y,
-            'pins': [
+            'input_pins': [
                 {
                     'name': pin.name,
+                    'title': pin.title,
                 }
-                for pin in node.pins
+                for pin in node.input_pins
             ],
+            'output_pins': [
+                {
+                    'name': pin.name,
+                    'title': pin.title,
+                }
+                for pin in node.output_pins
+            ],
+            'space': space_to_dict(node.space)
         }
     elif isinstance(node, SelfSpace):
         return {
@@ -187,12 +207,14 @@ def node_to_dict(node: Node) -> dict:
             'input_pins': [
                 {
                     'name': pin.name,
+                    'title': pin.title,
                 }
                 for pin in node.input_pins
             ],
             'output_pins': [
                 {
                     'name': pin.name,
+                    'title': pin.title,
                 }
                 for pin in node.output_pins
             ],
@@ -213,6 +235,15 @@ def edge_to_dict(edge: Edge) -> dict:
     }
 
 
+def space_to_def(space: Space) -> str:
+    lines = []
+    for n in space.nodes.values():
+        lines.append(f'node_{n.id} = {node_to_def(n)}\n')
+    for e in space.edges:
+        lines.append(edge_to_def(e))
+    return ''.join(lines)
+
+
 def node_to_def(node: Node) -> str:
     if isinstance(node, Input):
         return 'input'
@@ -225,7 +256,7 @@ def node_to_def(node: Node) -> str:
     elif isinstance(node, Operator):
         return f'opr[{node.value}]'
     elif isinstance(node, SubSpace):
-        return 'subspace[]'  # TODO
+        return f'subspace[\n{space_to_def(node.space)}]'
     elif isinstance(node, SelfSpace):
         return 'subspace[self]'
     raise NotImplemented()
