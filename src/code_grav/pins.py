@@ -57,7 +57,7 @@ class InvisiblePin(Pin):
         return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
-class NamedInputPin(BasePin):
+class InputPin(BasePin):
     def __init__(self, node: Node, name: str, text: str | None, x: int, y: int):
         self.node: Node = node
         self.name = name
@@ -83,7 +83,7 @@ class NamedInputPin(BasePin):
         return pygame.Rect(*camera.world_to_window(x, y), size, size)
 
 
-class NamedOutputPin(BasePin):
+class OutputPin(BasePin):
     def __init__(self, node: Node, name: str, text: str | None, x: int, y: int):
         self.node: Node = node
         self.name = name

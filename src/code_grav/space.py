@@ -34,10 +34,10 @@ class Space:
 
     @property
     def objects(self) -> Iterator[Drawable]:
-        for e in self.edges:
-            yield e
         for n in self.nodes.values():
             yield n
+        for e in self.edges:
+            yield e
 
     def was_select_rect(self, event) -> Clickable | None:
         for obj in self.objects:

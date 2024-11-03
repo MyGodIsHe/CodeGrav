@@ -4,7 +4,7 @@ from pygame import Surface, Rect
 from code_grav import colors
 from code_grav.camera import camera
 from code_grav.sync_pins import SyncPins
-from code_grav.pins import InvisiblePin, HalfPin, NamedOutputPin, NamedInputPin
+from code_grav.pins import InvisiblePin, HalfPin, OutputPin, InputPin
 from code_grav.render import draw_button, draw_circle, draw_text_top_button
 from code_grav.space_types import Node, ContextMenuItems, SpaceProtocol, BasePin
 from code_grav.utils import get_new_id, get_max_pin_id, generate_pos_pins
@@ -21,7 +21,7 @@ class Input(Node):
         self.pin_events = pin_events
         self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            NamedOutputPin(self, pin, pin, self.half_width, 0)
+            OutputPin(self, pin, pin, self.half_width, 0)
             for pin in pins
         ]
         self.height = generate_pos_pins(self.pins, 100 - 15, 15)
@@ -45,7 +45,7 @@ class Input(Node):
         for pin in self.pins:
             if pin.name == pin_name:
                 return
-        pin = NamedOutputPin(self, pin_name, pin_name, self.half_width, 0)
+        pin = OutputPin(self, pin_name, pin_name, self.half_width, 0)
         self.pins.append(pin)
         self.height = generate_pos_pins(self.pins, self.height - 15, 15)
         self.half_height = self.height // 2
@@ -72,7 +72,7 @@ class Output(Node):
         self.pin_events = pin_events
         self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            NamedInputPin(self, pin, pin, -self.half_width, 0)
+            InputPin(self, pin, pin, -self.half_width, 0)
             for pin in pins
         ]
         self.height = generate_pos_pins(self.pins, 100 - 15, 15)
@@ -96,7 +96,7 @@ class Output(Node):
         for pin in self.pins:
             if pin.name == pin_name:
                 return
-        pin = NamedInputPin(self, pin_name, pin_name, -self.half_width, 0)
+        pin = InputPin(self, pin_name, pin_name, -self.half_width, 0)
         self.pins.append(pin)
         self.height = generate_pos_pins(self.pins, self.height - 15, 15)
         self.half_height = self.height // 2
@@ -113,24 +113,28 @@ class Output(Node):
 
 
 class Const(Node):
+    half_size = 30
+    size = half_size * 2
+
     def __init__(self, x: int, y: int, value: str = '1', node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.value = value
         self.pins = [
-            InvisiblePin(self, 'value', 0, 0),
+            InputPin(self, 'input', None, -self.half_size, 0),
+            OutputPin(self, 'output', None, self.half_size, 0),
         ]
 
     def draw(self, surface: Surface):
         x, y = camera.world_to_window(self.x, self.y)
-        draw_circle(surface, x, y, self.value)
+        draw_circle(surface, x, y, self.value, self.half_size)
+        for pin in self.pins:
+            pin.draw(surface)
 
     def select_rect(self) -> Rect:
-        half_size = 25
-        size = half_size * 2
-        x, y = camera.world_to_window(self.x - half_size, self.y - half_size)
-        return pygame.Rect(x, y, size, size)
+        x, y = camera.world_to_window(self.x - self.half_size, self.y - self.half_size)
+        return pygame.Rect(x, y, self.size, self.size)
 
     def get_context_menu_items(self) -> ContextMenuItems:
         return [
@@ -150,10 +154,10 @@ class If(Node):
         self.y = y
         self.value = value
         self.pins = [
-            NamedInputPin(self, 'first', None, -self.half_width, -25),
-            NamedInputPin(self, 'second', None, -self.half_width, 25),
-            NamedOutputPin(self, 'true', 'true', self.half_width, -25),
-            NamedOutputPin(self, 'false', 'false', self.half_width, 25),
+            InputPin(self, 'first', None, -self.half_width, -25),
+            InputPin(self, 'second', None, -self.half_width, 25),
+            OutputPin(self, 'true', 'true', self.half_width, -25),
+            OutputPin(self, 'false', 'false', self.half_width, 25),
         ]
 
     def draw(self, surface: Surface):
@@ -183,9 +187,9 @@ class Operator(Node):
         self.y = y
         self.value = value
         self.pins = [
-            NamedInputPin(self, 'first', None, -self.half_width, -25),
-            NamedInputPin(self, 'second', None, -self.half_width, 25),
-            NamedOutputPin(self, 'output', None, self.half_width, 0),
+            InputPin(self, 'first', None, -self.half_width, -25),
+            InputPin(self, 'second', None, -self.half_width, 25),
+            OutputPin(self, 'output', None, self.half_width, 0),
         ]
 
     def draw(self, surface: Surface):
@@ -294,7 +298,7 @@ class SelfSpace(Node):
         for pin in self.input_pins:
             if pin.name == pin_name:
                 return
-        pin = NamedInputPin(self, pin_name, pin_name, -self.half_width, 0)
+        pin = InputPin(self, pin_name, pin_name, -self.half_width, 0)
         self.input_pins.append(pin)
         self.height = generate_pos_pins(self.input_pins, self.height - 15, 15)
         self.half_height = self.height // 2
@@ -313,7 +317,7 @@ class SelfSpace(Node):
         for pin in self.output_pins:
             if pin.name == pin_name:
                 return
-        pin = NamedOutputPin(self, pin_name, pin_name, self.half_width, 0)
+        pin = OutputPin(self, pin_name, pin_name, self.half_width, 0)
         self.output_pins.append(pin)
         self.height = generate_pos_pins(self.output_pins, self.height - 15, 15)
         self.half_height = self.height // 2

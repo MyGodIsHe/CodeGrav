@@ -57,75 +57,15 @@ def draw_circle(
 
 
 def draw_arrow(screen, rect1, rect2, thickness, circle_radius, color=colors.edge):
-    start_x, start_y = rect1.center
-    end = intersection_with_rectangle(rect2, rect1.center)
-    if not end:
-        return
-    end_x, end_y = end
-
-    # Рисуем линию
-    pygame.draw.line(screen, color, (start_x, start_y), (end_x, end_y), thickness)
-
-    # Рисуем кружок на конце линии
-    pygame.draw.circle(screen, color, (int(end_x), int(end_y)), circle_radius)
+    pygame.draw.circle(screen, color, rect1.center, thickness)
+    pygame.draw.line(screen, color, rect1.center, rect2.center, thickness)
+    pygame.draw.circle(screen, color, rect2.center, circle_radius)
 
 
 def draw_link(screen, from_rect, to_point, thickness, color=colors.edge):
-    end_x, end_y = to_point
-    start = intersection_with_rectangle(from_rect, to_point)
-    if not start:
-        return
-    start_x, start_y = start
-
-    # Рисуем линию
-    pygame.draw.line(screen, color, (start_x, start_y), (end_x, end_y), thickness)
-
-
-def intersection_with_rectangle(rect, line_direction):
-    center_x, center_y = rect.center
-    width, height = rect.width, rect.height
-    x, y = line_direction
-
-    # Половина ширины и высоты прямоугольника
-    half_width = width / 2
-    half_height = height / 2
-
-    # Координаты границ прямоугольника
-    left = center_x - half_width
-    right = center_x + half_width
-    bottom = center_y - half_height
-    top = center_y + half_height
-
-    # Вектор направления для прямой
-    vx = x - center_x
-    vy = y - center_y
-
-    # Если вектор направления имеет нулевую длину, вернуть центр как пересечение
-    if vx == 0 and vy == 0:
-        return center_x, center_y
-
-    # Время пересечения с вертикальными границами прямоугольника
-    tx1 = (left - center_x) / vx if vx != 0 else None
-    tx2 = (right - center_x) / vx if vx != 0 else None
-
-    # Время пересечения с горизонтальными границами прямоугольника
-    ty1 = (bottom - center_y) / vy if vy != 0 else None
-    ty2 = (top - center_y) / vy if vy != 0 else None
-
-    # Все времена пересечения
-    t_values = [t for t in [tx1, tx2, ty1, ty2] if t is not None]
-
-    # Находим минимальное положительное время пересечения
-    tmin = min([t for t in t_values if t >= 0], default=None)
-
-    if tmin is None:
-        return None
-
-    # Вычисление координат точки пересечения
-    intersection_x = center_x + tmin * vx
-    intersection_y = center_y + tmin * vy
-
-    return intersection_x, intersection_y
+    pygame.draw.circle(screen, color, from_rect.center, thickness)
+    pygame.draw.line(screen, color, from_rect.center, to_point, thickness)
+    pygame.draw.circle(screen, color, to_point, thickness)
 
 
 def draw_dashed_rect(surface, color, rect, width=1, dash_length=5):
