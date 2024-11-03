@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Protocol, TypeAlias
+from typing import Callable, Protocol, TypeAlias, Sequence
 
 from pygame import Rect, Surface
 
@@ -43,7 +43,7 @@ class Node(Clickable, Drawable, ABC):
     id: int
     x: int
     y: int
-    pins: list[BasePin]
+    pins: Sequence[BasePin]
 
     def get_pin_by_name(self, name: str) -> BasePin | None:
         for pin in self.pins:

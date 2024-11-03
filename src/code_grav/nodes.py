@@ -4,7 +4,7 @@ from pygame import Surface, Rect
 from code_grav import colors
 from code_grav.camera import camera
 from code_grav.sync_pins import SyncPins
-from code_grav.pins import InvisiblePin, HalfPin, HalfTextPin, NamedOutputPin, NamedInputPin
+from code_grav.pins import InvisiblePin, HalfPin, NamedOutputPin, NamedInputPin
 from code_grav.render import draw_button, draw_circle, draw_text_top_button
 from code_grav.space_types import Node, ContextMenuItems, SpaceProtocol, BasePin
 from code_grav.utils import get_new_id, get_max_pin_id, generate_pos_pins
@@ -14,14 +14,15 @@ class Input(Node):
     half_width = 50
     width = half_width * 2
 
-    def __init__(self, pin_events: SyncPins, x: int, y: int, node_id: int | None = None):
+    def __init__(self, pin_events: SyncPins, x: int, y: int, pins: list[str], node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.pin_events = pin_events
         self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            NamedOutputPin(self, '1', '1', self.half_width, 0),
+            NamedOutputPin(self, pin, pin, self.half_width, 0)
+            for pin in pins
         ]
         self.height = generate_pos_pins(self.pins, 100 - 15, 15)
         self.half_height = self.height // 2
@@ -64,14 +65,15 @@ class Output(Node):
     half_width = 50
     width = half_width * 2
 
-    def __init__(self, pin_events: SyncPins, x: int, y: int, node_id: int | None = None):
+    def __init__(self, pin_events: SyncPins, x: int, y: int, pins: list[str], node_id: int | None = None):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.pin_events = pin_events
         self.pin_events.add_handlers.append(self.add_pin_handler)
         self.pins = [
-            NamedInputPin(self, '1', '1', -self.half_width, 0),
+            NamedInputPin(self, pin, pin, -self.half_width, 0)
+            for pin in pins
         ]
         self.height = generate_pos_pins(self.pins, 100 - 15, 15)
         self.half_height = self.height // 2
@@ -233,19 +235,23 @@ class SelfSpace(Node):
     half_height = 25
     height = half_height * 2
 
-    def __init__(self, x: int, y: int, space: 'Space', node_id: int | None = None):
+    def __init__(
+            self,
+            x: int,
+            y: int,
+            input_pins: list[str],
+            output_pins: list[str],
+            node_id: int | None = None,
+    ):
         self.id = node_id or get_new_id()
         self.x = x
         self.y = y
         self.input_pins = []
         self.output_pins = []
-        self.space = space
-        space.sync_input_pins.add_handlers.append(self.add_input_pin_handler)
-        space.sync_output_pins.add_handlers.append(self.add_output_pin_handler)
-        for pin in space.input_node.pins:
-            self._new_input_pin(pin.name)
-        for pin in space.output_node.pins:
-            self._new_output_pin(pin.name)
+        for pin in input_pins:
+            self._new_input_pin(pin)
+        for pin in output_pins:
+            self._new_output_pin(pin)
         self.height = max(
             generate_pos_pins(self.input_pins, 100 - 15, 15),
             generate_pos_pins(self.output_pins, 100 - 15, 15),
@@ -298,7 +304,7 @@ class SelfSpace(Node):
         max_int = get_max_pin_id(self.input_pins) + 1
         pin = self._new_input_pin(str(max_int))
         if pin:
-            self.space.sync_input_pins.add_pin(pin.name)
+            space.sync_input_pins.add_pin(pin.name)
 
     def add_input_pin_handler(self, pin_name: str):
         self._new_input_pin(pin_name)
@@ -317,7 +323,7 @@ class SelfSpace(Node):
         max_int = get_max_pin_id(self.output_pins) + 1
         pin = self._new_output_pin(str(max_int))
         if pin:
-            self.space.sync_output_pins.add_pin(pin.name)
+            space.sync_output_pins.add_pin(pin.name)
 
     def add_output_pin_handler(self, pin_name: str):
         self._new_output_pin(pin_name)

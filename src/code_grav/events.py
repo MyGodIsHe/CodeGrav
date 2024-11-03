@@ -6,7 +6,7 @@ import pygame
 from code_grav import colors, file_manager
 from code_grav.app import Window
 from code_grav.camera import camera
-from code_grav.nodes import SubSpace, Const, Operator, If, SelfSpace, Input, Output
+from code_grav.nodes import SubSpace, Const, Operator, If, SelfSpace
 from code_grav.render import draw_dashed_rect, draw_button, draw_link, draw_flexible_button
 from code_grav.space_manager import SpaceManager
 from code_grav.space_types import Node, BasePin
@@ -278,7 +278,14 @@ class SpaceContextMenuEvents:
                 )
                 return
             elif selected_cls == SelfSpace:
-                node = selected_cls(x, y, self.space_manager.space)
+                node = selected_cls(
+                    x,
+                    y,
+                    [pin.name for pin in self.space_manager.space.input_node.pins],
+                    [pin.name for pin in self.space_manager.space.output_node.pins],
+                )
+                self.space_manager.space.sync_input_pins.add_handlers.append(node.add_input_pin_handler)
+                self.space_manager.space.sync_output_pins.add_handlers.append(node.add_output_pin_handler)
                 self.space_manager.space.add_node(node)
             else:
                 self.space_manager.space.add_node(selected_cls(x, y))

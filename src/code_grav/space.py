@@ -26,10 +26,10 @@ class Space:
         self.nodes: dict[int, Node] = {}
         self.edges: list[Edge] = []
         self.sync_input_pins = SyncPins()
-        self.input_node = Input(self.sync_input_pins, -200, 0)
+        self.input_node = Input(self.sync_input_pins, -200, 0, ['1'])
         self.add_node(self.input_node)
         self.sync_output_pins = SyncPins()
-        self.output_node = Output(self.sync_output_pins, 200, 0)
+        self.output_node = Output(self.sync_output_pins, 200, 0, ['1'])
         self.add_node(self.output_node)
 
     @property

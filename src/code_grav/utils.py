@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from code_grav.nodes import Node
 from code_grav.space_types import BasePin
 
@@ -53,7 +55,7 @@ def get_max_pin_id(pins: list[BasePin], prefix: str = '') -> int:
     return max_int
 
 
-def generate_pos_pins(pins: list[BasePin], height: int, top_offset: int) -> int:
+def generate_pos_pins(pins: Sequence[BasePin], height: int, top_offset: int) -> int:
     total = len(pins)
     height = max(height, sum(pin.radius * 2 for pin in pins) + (total - 1) * 10)
     step = height / (total + 1)

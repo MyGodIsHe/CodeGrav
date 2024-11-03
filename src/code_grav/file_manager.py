@@ -2,7 +2,7 @@ import json
 import os
 
 from code_grav.nodes import Input, Output, Const, If, Operator, SubSpace, SelfSpace
-from code_grav.pins import BasePin, HalfPin
+from code_grav.pins import BasePin
 from code_grav.space import Space, Edge
 from code_grav.space_manager import SpaceManager
 from code_grav.space_types import Node
@@ -35,6 +35,7 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
+            pins=[pin['name'] for pin in data['pins']],
         )
     elif data['name'] == 'Output':
         return Output(
@@ -42,6 +43,7 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
+            pins=[pin['name'] for pin in data['pins']],
         )
     elif data['name'] == 'Const':
         return Const(
@@ -76,12 +78,11 @@ def dict_to_node(space: Space, data: dict) -> Node:
             node_id=data['id'],
             x=data['x'],
             y=data['y'],
-            space=space,
+            input_pins=data['input_pins'],
+            output_pins=data['output_pins'],
         )
-        ss.pins = [
-            HalfPin(ss, pin['name'], 0, 25 if pin['name'].startswith('output') else -25)
-            for pin in data['pins']
-        ]
+        space.sync_input_pins.add_handlers.append(ss.add_input_pin_handler)
+        space.sync_output_pins.add_handlers.append(ss.add_output_pin_handler)
         return ss
     raise NotImplemented()
 
@@ -104,7 +105,7 @@ def save(root_space: Space, filepath: str):
         ],
     }
     with open(filepath, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)
 
     with open(os.path.splitext(filepath)[0] + '.g', 'w') as f:
         for n in root_space.nodes.values():
@@ -120,6 +121,12 @@ def node_to_dict(node: Node) -> dict:
             'id': node.id,
             'x': node.x,
             'y': node.y,
+            'pins': [
+                {
+                    'name': pin.name,
+                }
+                for pin in node.pins
+            ],
         }
     elif isinstance(node, Output):
         return {
@@ -127,6 +134,12 @@ def node_to_dict(node: Node) -> dict:
             'id': node.id,
             'x': node.x,
             'y': node.y,
+            'pins': [
+                {
+                    'name': pin.name,
+                }
+                for pin in node.pins
+            ],
         }
     elif isinstance(node, Const):
         return {
@@ -171,11 +184,17 @@ def node_to_dict(node: Node) -> dict:
             'id': node.id,
             'x': node.x,
             'y': node.y,
-            'pins': [
+            'input_pins': [
                 {
                     'name': pin.name,
                 }
-                for pin in node.pins
+                for pin in node.input_pins
+            ],
+            'output_pins': [
+                {
+                    'name': pin.name,
+                }
+                for pin in node.output_pins
             ],
         }
     raise NotImplemented()
